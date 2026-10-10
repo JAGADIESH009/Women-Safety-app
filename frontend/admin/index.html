@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeHer - Admin Dashboard & Incident Map</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        :root {
+            --bg-color: #0d0f12;
+            --surface-color: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-primary: #f43f5e;
+            --accent-secondary: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(244, 63, 94, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 2rem; padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            animation: fadeInDown 0.6s ease-out;
+        }
+        h1 {
+            font-weight: 800; font-size: 1.8rem;
+            background: linear-gradient(to right, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .login-section { display: flex; gap: 1rem; }
+        input, button, select {
+            font-family: 'Inter', sans-serif;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.6rem 1rem;
+            border-radius: 8px; outline: none; transition: all 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--accent-secondary); box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
+        button {
+            background: linear-gradient(135deg, var(--accent-secondary), #6d28d9);
+            border: none; cursor: pointer; font-weight: 600;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+        
+        .dashboard-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem; margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--surface-color); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(10px);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); border-color: rgba(255, 255, 255, 0.15); }
+        .stat-card:nth-child(1) { border-top: 3px solid var(--accent-secondary); }
+        .stat-card:nth-child(2) { border-top: 3px solid var(--accent-primary); }
+        .stat-card:nth-child(3) { border-top: 3px solid var(--success); }
+        .stat-title { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 2.5rem; font-weight: 800; }
+
+        .main-layout {
+            display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;
+            animation: fadeInUp 0.6s ease-out backwards; animation-delay: 0.4s;
+        }
+        .panel {
+            background: var(--surface-color); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(10px);
+            display: flex; flex-direction: column;
+        }
+        .section-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;}
+        
+        #map { height: 500px; width: 100%; border-radius: 12px; background: #1a1c23; z-index: 1;}
+        
+        .incident-list { flex-grow: 1; overflow-y: auto; max-height: 500px; padding-right: 0.5rem;}
+        .incident-item {
+            padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px;
+            margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .incident-item:hover, .incident-item.active-item {
+            border-color: var(--accent-secondary); background: rgba(139, 92, 246, 0.05);
+        }
+        
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-ACTIVE { background: rgba(244, 63, 94, 0.2); color: #fda4af; }
+        .status-ACKNOWLEDGED { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+        .status-RESOLVED { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+        .status-ENDED { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+
+        .incident-details { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .incident-details div { margin-bottom: 0.25rem; }
+        .action-buttons { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.8rem; background: var(--surface-color); }
+        .btn-small:hover { background: rgba(255, 255, 255, 0.1); }
+        
+        .filters { display: flex; gap: 1rem; margin-bottom: 1rem; }
+
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none !important; }
+        .error-msg { color: var(--accent-primary); font-size: 0.9rem; margin-bottom: 1rem; }
+        
+        .leaflet-popup-content-wrapper { background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); }
+        .leaflet-popup-tip { background: var(--bg-color); }
+
+        @media (max-width: 1024px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SafeHer Admin</h1>
+            <div class="login-section" id="authSection">
+                <input type="text" id="tokenInput" placeholder="Enter Firebase Bearer Token...">
+                <input type="text" id="apiUrlInput" placeholder="API Base URL (optional)" value="https://women-safety-app-xo2h.onrender.com">
+                <button onclick="loadDashboard()">Connect</button>
+            </div>
+            <div id="loggedInUser" class="hidden">
+                <span class="status-badge status-RESOLVED">Connected</span>
+            </div>
+        </header>
+
+        <div id="errorText" class="error-msg"></div>
+
+        <div id="dashboardContent" class="hidden">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Total Users</div>
+                    <div class="stat-value" id="statUsers">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Active SOS</div>
+                    <div class="stat-value" id="statActive">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Resolved Alerts</div>
+                    <div class="stat-value" id="statResolved">-</div>
+                </div>
+            </div>
+
+            <div class="main-layout">
+                <div class="panel">
+                    <h2 class="section-title">
+                        Live Incident Map
+                        <div class="filters">
+                            <select id="statusFilter" onchange="applyFilters()">
+                                <option value="ALL">All Statuses</option>
+                                <option value="ACTIVE" selected>Active & Recent</option>
+                                <option value="RESOLVED">Resolved</option>
+                            </select>
+                            <button class="btn-small" onclick="fetchIncidents()">Refresh Map</button>
+                        </div>
+                    </h2>
+                    <div id="map"></div>
+                </div>
+                
+                <div class="panel">
+                    <h2 class="section-title">Emergency Response</h2>
+                    <div class="incident-list" id="incidentList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let markers = [];
+        let allIncidents = [];
+        let globalToken = '';
+        let globalApiUrl = '';
+
+        function initMap() {
+            if (map) return;
+            map = L.map('map').setView([20.5937, 78.9629], 4); // Default to India
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+        }
+
+        async function loadDashboard() {
+            globalToken = document.getElementById('tokenInput').value.trim();
+            globalApiUrl = document.getElementById('apiUrlInput').value.trim() || 'https://women-safety-app-xo2h.onrender.com';
+            
+            if (!globalToken) {
+                document.getElementById('errorText').innerText = "Please provide an admin bearer token.";
+                return;
+            }
+            
+            document.getElementById('errorText').innerText = "Loading...";
+
+            try {
+                // Fetch stats
+                const statsResponse = await fetch(`${globalApiUrl}/admin/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${globalToken}` }
+                });
+
+                if (!statsResponse.ok) {
+                    throw new Error(statsResponse.status === 403 ? "Access denied. You are not an admin." : "Authentication failed.");
+                }
+
+                const statsData = await statsResponse.json();
+                
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('loggedInUser').classList.remove('hidden');
+                document.getElementById('dashboardContent').classList.remove('hidden');
+                document.getElementById('errorText').innerText = "";
+
+                document.getElementById('statUsers').innerText = statsData.total_users;
+                document.getElementById('statActive').innerText = statsData.active_incidents;
+                document.getElementById('statResolved').innerText = statsData.resolved_incidents;
+
+                initMap();
+                await fetchIncidents();
+
+            } catch (err) {
+                document.getElementById('errorText').innerText = err.message;
+            }
+        }
+
+        async function fetchIncidents() {
+            try {
+                const response = await fetch(`${globalApiUrl}/admin/incidents`, {
+                    headers: { 'Authorization': `Bearer ${globalToken}` }
+                });
+                if (!response.ok) throw new Error("Failed to fetch incidents");
+                
+                allIncidents = await response.json();
+                applyFilters();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('errorText').innerText = "Error refreshing map data.";
+            }
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let filtered = allIncidents;
+            if (statusFilter !== 'ALL') {
+                if (statusFilter === 'ACTIVE') {
+                    filtered = allIncidents.filter(inc => inc.status === 'ACTIVE');
+                } else {
+                    filtered = allIncidents.filter(inc => inc.status !== 'ACTIVE');
+                }
+            }
+
+            renderMapMarkers(filtered);
+            renderIncidentList(filtered);
+        }
+
+        function getMarkerColor(status) {
+            if (status === 'ACTIVE') return '#f43f5e';
+            if (status === 'ACKNOWLEDGED') return '#f59e0b';
+            return '#10b981';
+        }
+
+        function renderMapMarkers(incidents) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            
+            const bounds = [];
+
+            incidents.forEach(inc => {
+                if (!inc.locations || inc.locations.length === 0) return;
+                
+                // Get latest location
+                const latestLoc = inc.locations[inc.locations.length - 1];
+                const lat = latestLoc.latitude;
+                const lng = latestLoc.longitude;
+                bounds.push([lat, lng]);
+
+                const color = getMarkerColor(inc.status);
+                
+                const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color};"></div>`;
+                const icon = L.divIcon({
+                    html: markerHtml,
+                    className: 'custom-leaflet-marker',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                const dateStr = new Date(inc.start_time).toLocaleString();
+                const userName = inc.user?.name || inc.user?.email || `User ${inc.user_id}`;
+                const phone = inc.user?.phone || 'N/A';
+
+                const popupContent = `
+                    <div style="padding: 5px;">
+                        <strong style="font-size: 1.1em">${inc.type}</strong><br>
+                        <span style="color: ${color}; font-weight: bold;">${inc.status}</span><br>
+                        <hr style="border-color: #333; margin: 5px 0;">
+                        User: ${userName}<br>
+                        Phone: ${phone}<br>
+                        Time: ${dateStr}<br>
+                        Accuracy: &plusmn;${latestLoc.accuracy}m
+                    </div>
+                `;
+
+                const marker = L.marker([lat, lng], { icon }).bindPopup(popupContent).addTo(map);
+                marker.on('click', () => {
+                    document.querySelectorAll('.incident-item').forEach(el => el.classList.remove('active-item'));
+                    const listEl = document.getElementById(`inc-item-${inc.id}`);
+                    if (listEl) {
+                        listEl.classList.add('active-item');
+                        listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+                markers.push(marker);
+            });
+
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+            }
+        }
+
+        function renderIncidentList(incidents) {
+            const list = document.getElementById('incidentList');
+            list.innerHTML = '';
+            
+            if (incidents.length === 0) {
+                list.innerHTML = '<div style="color: #94a3b8; text-align: center; margin-top: 1rem;">No incidents match filters</div>';
+                return;
+            }
+
+            incidents.forEach(inc => {
+                const latestLoc = (inc.locations && inc.locations.length > 0) ? inc.locations[inc.locations.length - 1] : null;
+                const dateStr = new Date(inc.start_time).toLocaleString();
+                const userName = inc.user?.name || inc.user?.email || `User ${inc.user_id}`;
+                
+                const div = document.createElement('div');
+                div.className = 'incident-item';
+                div.id = `inc-item-${inc.id}`;
+                
+                let locText = '<span style="color: #ef4444;">No Location Data</span>';
+                let actionButtons = '';
+                
+                if (latestLoc) {
+                    const staleMsg = (new Date() - new Date(latestLoc.timestamp)) > 3600000 ? ' (Stale)' : '';
+                    locText = `${latestLoc.latitude.toFixed(5)}, ${latestLoc.longitude.toFixed(5)} &plusmn;${latestLoc.accuracy}m${staleMsg}`;
+                    
+                    const mapsLink = `https://www.google.com/maps/search/?api=1&query=${latestLoc.latitude},${latestLoc.longitude}`;
+                    const summary = `SOS ALERT: ${userName}. Status: ${inc.status}. Location: ${mapsLink} Time: ${dateStr}`;
+                    
+                    actionButtons = `
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="window.open('${mapsLink}', '_blank'); event.stopPropagation();">Google Maps</button>
+                            <button class="btn-small" onclick="navigator.clipboard.writeText('${summary}'); event.stopPropagation();">Copy Summary</button>
+                        </div>
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="font-weight: 600; font-size: 1.1rem;">${inc.type}</div>
+                        <span class="status-badge status-${inc.status}">${inc.status}</span>
+                    </div>
+                    <div class="incident-details">
+                        <div><strong>User:</strong> ${userName} (${inc.user?.phone || 'No phone'})</div>
+                        <div><strong>Time:</strong> ${dateStr}</div>
+                        <div><strong>Location:</strong> ${locText}</div>
+                    </div>
+                    ${actionButtons}
+                `;
+                
+                div.onclick = () => {
+                    document.querySelectorAll('.incident-item').forEach(el => el.classList.remove('active-item'));
+                    div.classList.add('active-item');
+                    if (latestLoc) {
+                        map.setView([latestLoc.latitude, latestLoc.longitude], 16);
+                        markers.forEach(m => {
+                            if (m.getLatLng().lat === latestLoc.latitude && m.getLatLng().lng === latestLoc.longitude) {
+                                m.openPopup();
+                            }
+                        });
+                    }
+                };
+                list.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
