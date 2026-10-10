@@ -10,9 +10,30 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyC51tyvDN_2xKimU_PAbTd2GyZyiGydsl4",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "women-protection-project.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "women-protection-project",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "women-protection-project.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "592378767800",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:592378767800:web:69dd4029293212612e474d",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-WGX52916TY",
+        "EXPO_PUBLIC_API_URL": "https://women-safety-app-xo2h.onrender.com"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyC51tyvDN_2xKimU_PAbTd2GyZyiGydsl4",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "women-protection-project.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "women-protection-project",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "women-protection-project.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "592378767800",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:592378767800:web:69dd4029293212612e474d",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-WGX52916TY",
+        "EXPO_PUBLIC_API_URL": "https://women-safety-app-xo2h.onrender.com"
+      }
+    }
   },
   "submit": {
     "production": {}
