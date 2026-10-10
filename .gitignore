@@ -33,7 +33,9 @@ google-services.json
 *.db
 *.sqlite3
 *.b64
-*.txt
+adb_full_dump.txt
+dumpsys.txt
+sos_logcat.txt
 *.html
 *.png
 *.xml
