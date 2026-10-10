@@ -165,14 +165,16 @@ export function RegisterScreen({ navigation }) {
               onPress={handleGoogleLogin}
               textStyle={{ fontWeight: '500', color: colors.textPrimary }}
             />
-          </View>
-        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.signIn}>Sign in</Text>
-          </TouchableOpacity>
+            <View style={{ marginTop: spacing.xxl }}>
+              <Button 
+                title="Already have an account? Sign in"
+                variant="outline"
+                onPress={() => navigation.navigate('Login')}
+                disabled={isSubmitting}
+              />
+            </View>
+          </View>
         </View>
       </View>
     </ScreenWrapper>

@@ -133,14 +133,16 @@ export function LoginScreen({ navigation }) {
               onPress={handleGoogleLogin}
               textStyle={{ fontWeight: '500', color: colors.textPrimary }}
             />
-          </View>
-        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>New to SafeHer? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
-            <Text style={styles.createAccount}>Create account</Text>
-          </TouchableOpacity>
+            <View style={{ marginTop: spacing.xxl }}>
+              <Button 
+                title="Create Account"
+                variant="outline"
+                onPress={() => navigation.navigate('Register')}
+                disabled={isSubmitting}
+              />
+            </View>
+          </View>
         </View>
       </View>
     </ScreenWrapper>
