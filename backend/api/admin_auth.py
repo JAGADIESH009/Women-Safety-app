@@ -7,6 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import logging
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 
@@ -62,7 +63,7 @@ def send_email(to_email: str, subject: str, html_body: str):
     smtp_pass = os.environ.get("SMTP_PASSWORD")
     
     if not all([smtp_host, smtp_user, smtp_pass]):
-        print("SMTP config missing. Cannot send email.")
+        logging.error("SMTP config missing. Cannot send email.")
         return False
         
     msg = MIMEMultipart()
@@ -77,26 +78,31 @@ def send_email(to_email: str, subject: str, html_body: str):
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
         server.quit()
+        logging.info(f"Successfully sent email to {to_email}")
         return True
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        logging.error(f"Failed to send email: {e}")
         return False
 
 @router.post("/setup")
 def setup_initial_admin(db: Session = Depends(get_db)):
     """Creates the initial admin if none exists (for dev/setup)"""
-    if db.query(AdminUser).first():
-        return {"msg": "Admin already exists"}
-    
-    # We will use the user's provided email and a default id
-    admin = AdminUser(
-        admin_id="admin",
-        email="work.jagadiesh@gmail.com",
-        password_hash=get_password_hash("admin123")
-    )
-    db.add(admin)
-    db.commit()
-    return {"msg": "Created initial admin. ID: admin, Pass: admin123"}
+    try:
+        if db.query(AdminUser).first():
+            return {"msg": "Admin already exists"}
+        
+        # We will use the user's provided email and a default id
+        admin = AdminUser(
+            admin_id="admin",
+            email="work.jagadiesh@gmail.com",
+            password_hash=get_password_hash("admin123")
+        )
+        db.add(admin)
+        db.commit()
+        return {"msg": "Created initial admin. ID: admin, Pass: admin123"}
+    except Exception as e:
+        logging.error(f"Setup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/login", response_model=TokenResponse)
 def login(creds: AdminLogin, db: Session = Depends(get_db)):
@@ -109,9 +115,18 @@ def login(creds: AdminLogin, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordReq, db: Session = Depends(get_db)):
+    # Fail fast if SMTP is not configured at all (server issue)
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_pass = os.environ.get("SMTP_PASSWORD")
+    if not all([smtp_host, smtp_user, smtp_pass]):
+        logging.error("SMTP configuration is missing. Forgot password flow cannot proceed.")
+        raise HTTPException(status_code=500, detail="Server Email Configuration is missing or incomplete.")
+
     user = db.query(AdminUser).filter(AdminUser.email == req.email).first()
     if not user:
         # Don't leak whether user exists
+        logging.info(f"Forgot password requested for unknown email: {req.email}")
         return {"msg": "If your email is registered, you will receive a reset link shortly."}
         
     token = secrets.token_urlsafe(32)
@@ -134,7 +149,12 @@ def forgot_password(req: ForgotPasswordReq, db: Session = Depends(get_db)):
     <p><a href="{reset_link}">Click here to reset your password</a></p>
     <p>This link will expire in 1 hour.</p>
     """
-    send_email(user.email, "SafeHer Admin - Password Reset", body)
+    
+    success = send_email(user.email, "SafeHer Admin - Password Reset", body)
+    if not success:
+        logging.error(f"Failed to send password reset email to {req.email}")
+        # Return generic message to prevent account enumeration, but log the error.
+        return {"msg": "If your email is registered, you will receive a reset link shortly."}
     
     return {"msg": "If your email is registered, you will receive a reset link shortly."}
 
