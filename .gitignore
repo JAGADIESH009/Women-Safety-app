@@ -49,3 +49,6 @@ fix_contacts.py
 # Ignore other sensitive files
 dummy_sa.json
 firebase-credentials.json
+
+# Explicitly keep Expo assets so EAS CLI packs them
+!frontend/mobile/assets/*.png
