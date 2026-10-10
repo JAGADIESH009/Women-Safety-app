@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import users, contacts, incidents, locations
+from api import users, contacts, incidents, locations, admin
 from dotenv import load_dotenv
 import os
 
@@ -29,6 +29,7 @@ app.include_router(users.router)
 app.include_router(contacts.router)
 app.include_router(incidents.router)
 app.include_router(locations.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():
