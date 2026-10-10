@@ -11,17 +11,22 @@ load_dotenv(dotenv_path=env_path)
 
 SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if not SQLALCHEMY_DATABASE_URL:
-    print("WARNING: DATABASE_URL environment variable is not set. Database connection will fail.")
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-elif SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-elif SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+is_production = os.environ.get("RENDER") == "true"
 
-# Neon recommends adding sslmode=require if it's missing, but it's usually in the URL
+if not SQLALCHEMY_DATABASE_URL:
+    if is_production:
+        raise ValueError("CRITICAL: DATABASE_URL environment variable is missing on Render. Please set it in the Render Dashboard.")
+    print("WARNING: DATABASE_URL environment variable is not set. Using local SQLite database.")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+else:
+    # SQLAlchemy 2.0+ with psycopg3 requires postgresql+psycopg://
+    if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+    elif SQLALCHEMY_DATABASE_URL.startswith("postgresql://") and not SQLALCHEMY_DATABASE_URL.startswith("postgresql+psycopg://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
 connect_args = {}
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
 try:

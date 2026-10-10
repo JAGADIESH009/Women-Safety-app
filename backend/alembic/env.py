@@ -22,18 +22,8 @@ from database.models import Base
 # access to the values within the .ini file in use.
 config = context.config
 
-# Dynamically set the sqlalchemy.url from environment variable
-database_url = os.environ.get("DATABASE_URL")
-if database_url:
-    # Ensure it uses the psycopg driver and correct postgresql scheme
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
-    elif database_url.startswith("postgresql://"):
-        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
-        
-    config.set_main_option("sqlalchemy.url", database_url)
-else:
-    print("WARNING: DATABASE_URL environment variable is not set. Database connection may fail.")
+from database.database import SQLALCHEMY_DATABASE_URL
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -81,8 +71,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    configuration = config.get_section(config.config_ini_section)
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
