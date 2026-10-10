@@ -170,7 +170,7 @@ export function MapScreen() {
         .custom-marker {
           width: 20px;
           height: 20px;
-          background-color: #7C3AED;
+          background-color: #780d2b;
           border: 3px solid #FFFFFF;
           border-radius: 50%;
           box-shadow: 0 0 10px rgba(0,0,0,0.4);

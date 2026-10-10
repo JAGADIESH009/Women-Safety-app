@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform, Alert, Image } from 'react-native';
 import { ScreenWrapper } from '../components/ui/ScreenWrapper';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -60,7 +60,7 @@ export function ForgotPasswordScreen({ navigation }) {
 
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <ShieldCheck size={32} color={colors.accentBrand} strokeWidth={2.5} />
+            <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
           </View>
           <Text style={styles.brandTitle}>Reset Password</Text>
           <Text style={styles.subtitle}>Enter your email address and we'll send you a link to reset your password.</Text>
@@ -136,6 +136,12 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     borderColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(124, 58, 237, 0.15)',
     ...shadows.glowBrand,
     marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   brandTitle: {
     ...typography.h1,

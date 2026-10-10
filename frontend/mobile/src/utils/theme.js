@@ -2,18 +2,18 @@ import { Platform } from 'react-native';
 import { useThemeContext } from '../context/ThemeContext';
 
 const darkColors = {
-  // Deep charcoal/navy foundation instead of pure black
-  bgPrimary: '#0F1218', 
-  bgSecondary: '#161A22',
-  bgTertiary: '#1D222B',
+  // Deep burgundy/charcoal foundation
+  bgPrimary: '#1A0F12', 
+  bgSecondary: '#24161A',
+  bgTertiary: '#2E1E23',
   
   textPrimary: '#FDFBF7', // warm white
   textSecondary: '#EBEBF599',
   textMuted: '#EBEBF54D',
   
-  // Brand: Deep Plum / Muted Violet
-  accentBrand: '#8B5CF6', 
-  accentBrandMuted: 'rgba(139, 92, 246, 0.15)',
+  // Brand: Lighter Burgundy / Rose for dark mode legibility
+  accentBrand: '#B23A5B', 
+  accentBrandMuted: 'rgba(178, 58, 91, 0.15)',
   
   // Safe: Emerald / Teal
   accentSafe: '#10B981',
@@ -23,11 +23,11 @@ const darkColors = {
   accentWarning: '#F59E0B',
   accentWarningMuted: 'rgba(245, 158, 11, 0.15)',
   
-  // Emergency: Coral / Red
+  // Emergency: Rose / Red
   accentEmergency: '#F43F5E',
   accentEmergencyMuted: 'rgba(244, 63, 94, 0.15)',
   
-  border: '#2D3340',
+  border: '#3A272C',
   overlay: 'rgba(0, 0, 0, 0.6)',
 };
 
@@ -42,17 +42,18 @@ darkColors.warning = darkColors.accentWarning;
 darkColors.danger = darkColors.accentEmergency;
 
 const lightColors = {
-  // Warm off-white / ivory foundation
-  bgPrimary: '#FDFBF7', 
-  bgSecondary: '#F3F0E9',
-  bgTertiary: '#EAE5D9',
+  // Warm cream / ivory foundation
+  bgPrimary: '#FFFDF9', 
+  bgSecondary: '#F4EFE6',
+  bgTertiary: '#E8E0D1',
   
-  textPrimary: '#11141A', // deep charcoal
-  textSecondary: '#4A505E',
-  textMuted: '#848A99',
+  textPrimary: '#2A161A', // deep brown/burgundy
+  textSecondary: '#5E4A4D',
+  textMuted: '#998487',
   
-  accentBrand: '#7C3AED', 
-  accentBrandMuted: 'rgba(124, 58, 237, 0.1)',
+  // Brand: Burgundy
+  accentBrand: '#780d2b', 
+  accentBrandMuted: 'rgba(120, 13, 43, 0.1)',
   
   accentSafe: '#059669',
   accentSafeMuted: 'rgba(5, 150, 105, 0.1)',
@@ -60,12 +61,12 @@ const lightColors = {
   accentWarning: '#D97706',
   accentWarningMuted: 'rgba(217, 119, 6, 0.1)',
   
-  // Emergency: Coral / Red
+  // Emergency: Rose / Red
   accentEmergency: '#E11D48',
   accentEmergencyMuted: 'rgba(225, 29, 72, 0.1)',
   
-  border: '#D4CFC4',
-  overlay: 'rgba(17, 20, 26, 0.3)',
+  border: '#D4C6C0',
+  overlay: 'rgba(42, 22, 26, 0.3)',
 };
 
 // Add standard alias tokens to lightColors

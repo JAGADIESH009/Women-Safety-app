@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { ScreenWrapper } from '../components/ui/ScreenWrapper';
 import { Button } from '../components/ui/Button';
@@ -68,7 +68,7 @@ export function RegisterScreen({ navigation }) {
     try {
       await loginWithGoogle();
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+      if (err.message !== 'auth/popup-closed-by-user' && err.message !== 'auth/cancelled-popup-request') {
         setErrorMsg(err.message || 'Google Registration failed.');
       }
     } finally {
@@ -83,11 +83,11 @@ export function RegisterScreen({ navigation }) {
         <View style={styles.header}>
           <View style={styles.brandContainer}>
             <View style={styles.iconContainer}>
-              <ShieldCheck size={32} color={colors.accentBrand} strokeWidth={2.5} />
+              <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
             </View>
             <Text style={styles.brandTitle}>SafeHer</Text>
           </View>
-          <Text style={styles.subtitle}>Join our trusted safety network.</Text>
+          <Text style={styles.subtitle}>Your safety, always within reach.</Text>
         </View>
 
         <View style={styles.formCard}>
@@ -205,6 +205,12 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     borderWidth: 1,
     borderColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(124, 58, 237, 0.15)',
     ...shadows.glowBrand,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   brandTitle: {
     ...typography.h1,

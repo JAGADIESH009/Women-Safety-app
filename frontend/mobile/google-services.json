@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "592378767800",
+    "project_id": "women-protection-project",
+    "storage_bucket": "women-protection-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:592378767800:android:a782cfc1dd9bed862e474d",
+        "android_client_info": {
+          "package_name": "com.anonymous.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "592378767800-grm7p0nifvjentli879gvbavadgnh2vr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anonymous.mobile",
+            "certificate_hash": "aff1fbf47ae377c2189a7d8e23dde5e5f59beb1f"
+          }
+        },
+        {
+          "client_id": "592378767800-hbu2470c70j6rnajm8mbihina7a3tio9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anonymous.mobile",
+            "certificate_hash": "f016f487e263487648883aa8e57071e7b10244ea"
+          }
+        },
+        {
+          "client_id": "592378767800-va77s2e1manmlqu1sfk64cga7br8cvii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDebpNnJUNVE8w02IJ0pYwT_4nsNLM6kb0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "592378767800-va77s2e1manmlqu1sfk64cga7br8cvii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
