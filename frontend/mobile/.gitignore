@@ -40,3 +40,11 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Keep Expo app assets
+!assets/*.png
+
+# Local generated Android build files
+modules/expo-direct-sms/android/build/
+# Firebase backup
+google-services.json.bak

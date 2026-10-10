@@ -30,7 +30,9 @@
         "SEND_SMS",
         "CALL_PHONE",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.anonymous.mobile",
       "googleServicesFile": "./google-services.json"
@@ -42,6 +44,12 @@
       "expo-location",
       "@react-native-google-signin/google-signin",
       "expo-splash-screen"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a53bf15f-7c4f-41f3-a40b-02d48a90c62d"
+      }
+    },
+    "owner": "jagadiesh009s-team"
   }
 }

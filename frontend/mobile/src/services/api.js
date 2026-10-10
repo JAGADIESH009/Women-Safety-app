@@ -9,7 +9,7 @@ const getBaseUrl = () => {
         // Use 127.0.0.1 over adb reverse to bypass Windows Firewall
         return Platform.OS === 'android' ? 'http://127.0.0.1:8000' : 'http://localhost:8000';
     }
-    return 'https://api.yourproductiondomain.com'; // Fallback for production if env missing
+    return 'https://women-safety-app-xo2h.onrender.com'; // Fallback for production if env missing
 };
 
 const API_URL = getBaseUrl();
@@ -34,7 +34,7 @@ const fetchApi = async (endpoint, options = {}) => {
     try {
         const headers = await getHeaders();
         
-        const timeoutMs = options.timeout || 5000;
+        const timeoutMs = options.timeout || 60000; // Increased to 60s for Render cold starts
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
