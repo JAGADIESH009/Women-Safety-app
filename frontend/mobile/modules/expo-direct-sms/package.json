@@ -1,0 +1,8 @@
+{
+  "name": "expo-direct-sms",
+  "version": "1.0.0",
+  "main": "src/ExpoDirectSmsModule.ts",
+  "peerDependencies": {
+    "expo": "*"
+  }
+}

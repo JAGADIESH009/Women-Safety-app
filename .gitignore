@@ -1,0 +1,49 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.pytest_cache/
+
+# Expo / React Native
+.expo/
+dist/
+web-build/
+*.jks
+*.keystore
+google-services.json
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Databases and dumps
+*.db
+*.sqlite3
+*.b64
+*.txt
+*.html
+*.png
+*.xml
+*.mjs
+*.pyc
+
+# Local scripts
+dump_storage.py
+fix_contacts.py
+
+# Ignore other sensitive files
+dummy_sa.json
+firebase-credentials.json
