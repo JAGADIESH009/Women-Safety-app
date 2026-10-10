@@ -11,6 +11,26 @@ class IncidentAdminResponse(IncidentResponse):
     class Config:
         from_attributes = True
 
+class UserAdminResponse(BaseModel):
+    id: int
+    firebase_uid: str
+    email: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    blood_group: Optional[str] = None
+    created_at: Optional[datetime] = None
+    total_incidents: int
+    active_incidents: int
+    resolved_incidents: int
+    last_incident_date: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class UserDetailsAdminResponse(UserAdminResponse):
+    incidents: List[IncidentAdminResponse] = []
+
+
 class RegistrationTrend(BaseModel):
     date: str
     count: int

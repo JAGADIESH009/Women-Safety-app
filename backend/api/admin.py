@@ -6,7 +6,7 @@ import os
 
 from database.models import User, Incident
 from api.deps import get_db, get_current_user
-from schemas.admin_schemas import AdminDashboardResponse, RegistrationTrend, IncidentAdminResponse
+from schemas.admin_schemas import AdminDashboardResponse, RegistrationTrend, IncidentAdminResponse, UserAdminResponse, UserDetailsAdminResponse
 from typing import List
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -99,3 +99,69 @@ def get_all_incidents(db: Session = Depends(get_db), admin_user: AdminUser = Dep
         .all()
     )
     return incidents
+
+@router.get("/users", response_model=List[UserAdminResponse])
+def get_all_users(db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
+    """Returns all users with their incident statistics."""
+    users = db.query(User).options(joinedload(User.incidents)).all()
+    
+    response = []
+    for user in users:
+        total_incidents = len(user.incidents)
+        active_incidents = sum(1 for i in user.incidents if i.status == "ACTIVE")
+        resolved_incidents = sum(1 for i in user.incidents if i.status == "RESOLVED")
+        last_incident = max([i.start_time for i in user.incidents], default=None) if user.incidents else None
+        
+        response.append(
+            UserAdminResponse(
+                id=user.id,
+                firebase_uid=user.firebase_uid,
+                email=user.email,
+                name=user.name,
+                phone=user.phone,
+                blood_group=user.blood_group,
+                created_at=user.created_at,
+                total_incidents=total_incidents,
+                active_incidents=active_incidents,
+                resolved_incidents=resolved_incidents,
+                last_incident_date=last_incident
+            )
+        )
+    return response
+
+@router.get("/users/{user_id}", response_model=UserDetailsAdminResponse)
+def get_user_details(user_id: int, db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
+    """Returns details for a specific user, including incident history."""
+    user = (
+        db.query(User)
+        .options(
+            joinedload(User.incidents).joinedload(Incident.locations)
+        )
+        .filter(User.id == user_id)
+        .first()
+    )
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    total_incidents = len(user.incidents)
+    active_incidents = sum(1 for i in user.incidents if i.status == "ACTIVE")
+    resolved_incidents = sum(1 for i in user.incidents if i.status == "RESOLVED")
+    last_incident = max([i.start_time for i in user.incidents], default=None) if user.incidents else None
+    
+    sorted_incidents = sorted(user.incidents, key=lambda x: x.start_time, reverse=True)
+    
+    return UserDetailsAdminResponse(
+        id=user.id,
+        firebase_uid=user.firebase_uid,
+        email=user.email,
+        name=user.name,
+        phone=user.phone,
+        blood_group=user.blood_group,
+        created_at=user.created_at,
+        total_incidents=total_incidents,
+        active_incidents=active_incidents,
+        resolved_incidents=resolved_incidents,
+        last_incident_date=last_incident,
+        incidents=sorted_incidents
+    )
