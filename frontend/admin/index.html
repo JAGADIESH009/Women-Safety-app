@@ -9,10 +9,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
-    <!-- Firebase V8 Compat SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-
     <style>
         :root {
             --bg-color: #0d0f12;
@@ -47,7 +43,12 @@
             background: linear-gradient(to right, var(--text-main), var(--text-muted));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .login-section { display: flex; gap: 1rem; }
+        .auth-card {
+            background: var(--surface-color); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 2rem; max-width: 400px; margin: 2rem auto;
+            backdrop-filter: blur(10px);
+        }
+        .auth-form { display: flex; flex-direction: column; gap: 1rem; }
         input, button, select {
             font-family: 'Inter', sans-serif;
             background: var(--surface-color);
@@ -59,7 +60,7 @@
         input:focus, select:focus { border-color: var(--accent-secondary); box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
         button {
             background: linear-gradient(135deg, var(--accent-secondary), #6d28d9);
-            border: none; cursor: pointer; font-weight: 600;
+            border: none; cursor: pointer; font-weight: 600; padding: 0.8rem;
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
         
@@ -119,7 +120,9 @@
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .hidden { display: none !important; }
-        .error-msg { color: var(--accent-primary); font-size: 0.9rem; margin-bottom: 1rem; }
+        .error-msg { color: var(--accent-primary); font-size: 0.9rem; margin-bottom: 1rem; text-align: center; }
+        .success-msg { color: var(--success); font-size: 0.9rem; margin-bottom: 1rem; text-align: center; }
+        .auth-link { color: var(--accent-secondary); font-size: 0.9rem; cursor: pointer; text-align: center; text-decoration: underline; margin-top: 1rem; }
         
         .leaflet-popup-content-wrapper { background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); }
         .leaflet-popup-tip { background: var(--bg-color); }
@@ -133,22 +136,52 @@
     <div class="container">
         <header>
             <h1>SafeHer Admin</h1>
-            
-            <!-- Login Form -->
-            <div class="login-section" id="authSection">
-                <input type="email" id="emailInput" placeholder="Admin Email" required>
-                <input type="password" id="passwordInput" placeholder="Password" required>
-                <button onclick="loginFirebase()" id="loginBtn">Log In</button>
-            </div>
-            
-            <!-- Authenticated User Profile -->
             <div id="loggedInUser" class="hidden" style="display: flex; gap: 1rem; align-items: center;">
-                <span class="status-badge status-RESOLVED" id="userEmailBadge">Connected</span>
-                <button class="btn-small" onclick="logoutFirebase()">Log Out</button>
+                <span class="status-badge status-RESOLVED" id="userEmailBadge">Admin Connected</span>
+                <button class="btn-small" onclick="logout()">Log Out</button>
             </div>
         </header>
 
-        <div id="errorText" class="error-msg"></div>
+        <!-- Auth Section -->
+        <div id="authContainer">
+            
+            <!-- Login Form -->
+            <div class="auth-card" id="loginForm">
+                <h2 style="margin-bottom: 1rem; text-align: center;">Admin Login</h2>
+                <div id="loginError" class="error-msg"></div>
+                <div class="auth-form">
+                    <input type="text" id="adminIdInput" placeholder="Admin ID" required>
+                    <input type="password" id="passwordInput" placeholder="Password" required>
+                    <button onclick="login()" id="loginBtn">Log In</button>
+                    <div class="auth-link" onclick="showForm('forgotForm')">Forgot Password?</div>
+                </div>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div class="auth-card hidden" id="forgotForm">
+                <h2 style="margin-bottom: 1rem; text-align: center;">Reset Password</h2>
+                <div id="forgotError" class="error-msg"></div>
+                <div id="forgotSuccess" class="success-msg"></div>
+                <div class="auth-form">
+                    <input type="email" id="recoveryEmailInput" placeholder="Recovery Email" required>
+                    <button onclick="forgotPassword()" id="forgotBtn">Send Reset Link</button>
+                    <div class="auth-link" onclick="showForm('loginForm')">Back to Login</div>
+                </div>
+            </div>
+
+            <!-- Reset Password Form (Shown only via token) -->
+            <div class="auth-card hidden" id="resetForm">
+                <h2 style="margin-bottom: 1rem; text-align: center;">Set New Password</h2>
+                <div id="resetError" class="error-msg"></div>
+                <div id="resetSuccess" class="success-msg"></div>
+                <div class="auth-form">
+                    <input type="password" id="newPasswordInput" placeholder="New Password" required>
+                    <button onclick="resetPassword()" id="resetBtn">Update Password</button>
+                    <div class="auth-link" onclick="showForm('loginForm')">Go to Login</div>
+                </div>
+            </div>
+
+        </div>
 
         <div id="dashboardContent" class="hidden">
             <div class="dashboard-grid">
@@ -193,64 +226,62 @@
     </div>
 
     <script>
-        // --- Firebase Configuration & Initialization ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyC51tyvDN_2xKimU_PAbTd2GyZyiGydsl4",
-            authDomain: "women-protection-project.firebaseapp.com",
-            projectId: "women-protection-project",
-            storageBucket: "women-protection-project.firebasestorage.app",
-            messagingSenderId: "592378767800",
-            appId: "1:592378767800:web:69dd4029293212612e474d"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        const API_URL = 'https://women-safety-app-xo2h.onrender.com';
         
-        // --- Global State ---
         let map;
         let markers = [];
         let allIncidents = [];
-        const globalApiUrl = 'https://women-safety-app-xo2h.onrender.com';
+        let currentResetToken = null;
 
-        // --- Authentication Flow ---
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // User is signed in
-                document.getElementById('authSection').classList.add('hidden');
-                document.getElementById('loggedInUser').classList.remove('hidden');
-                document.getElementById('userEmailBadge').innerText = user.email;
-                
-                // Initialize Dashboard securely
-                await loadDashboard();
+        // Routing logic based on URL params
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const resetToken = params.get('reset_token');
+            if (resetToken) {
+                currentResetToken = resetToken;
+                showForm('resetForm');
             } else {
-                // User is signed out
-                document.getElementById('authSection').classList.remove('hidden');
-                document.getElementById('loggedInUser').classList.add('hidden');
-                document.getElementById('dashboardContent').classList.add('hidden');
-                
-                if (map) {
-                    map.remove();
-                    map = null;
+                const token = localStorage.getItem('adminToken');
+                if (token) {
+                    loadDashboard(token);
                 }
             }
-        });
+        };
 
-        async function loginFirebase() {
-            const email = document.getElementById('emailInput').value.trim();
+        function showForm(formId) {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('forgotForm').classList.add('hidden');
+            document.getElementById('resetForm').classList.add('hidden');
+            document.getElementById(formId).classList.remove('hidden');
+            
+            // clear messages
+            document.querySelectorAll('.error-msg').forEach(el => el.innerText = '');
+            document.querySelectorAll('.success-msg').forEach(el => el.innerText = '');
+        }
+
+        async function login() {
+            const adminId = document.getElementById('adminIdInput').value.trim();
             const password = document.getElementById('passwordInput').value;
             const btn = document.getElementById('loginBtn');
-            const err = document.getElementById('errorText');
+            const err = document.getElementById('loginError');
             
-            if (!email || !password) {
-                err.innerText = "Please enter your email and password.";
-                return;
-            }
+            if (!adminId || !password) return err.innerText = "Please enter Admin ID and password.";
             
             btn.innerText = "Authenticating...";
             err.innerText = "";
             
             try {
-                // Persistent session is default in web SDK
-                await auth.signInWithEmailAndPassword(email, password);
+                const res = await fetch(`${API_URL}/admin/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: adminId, password: password })
+                });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.detail || "Login failed");
+                
+                localStorage.setItem('adminToken', data.access_token);
+                await loadDashboard(data.access_token);
             } catch (error) {
                 err.innerText = error.message;
             } finally {
@@ -258,60 +289,111 @@
             }
         }
 
-        async function logoutFirebase() {
-            await auth.signOut();
-            document.getElementById('errorText').innerText = "You have been logged out.";
+        async function forgotPassword() {
+            const email = document.getElementById('recoveryEmailInput').value.trim();
+            const btn = document.getElementById('forgotBtn');
+            const err = document.getElementById('forgotError');
+            const success = document.getElementById('forgotSuccess');
+            
+            if (!email) return err.innerText = "Please enter your recovery email.";
+            
+            btn.innerText = "Sending...";
+            err.innerText = ""; success.innerText = "";
+            
+            try {
+                const res = await fetch(`${API_URL}/admin/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Request failed");
+                success.innerText = data.msg;
+            } catch (error) {
+                err.innerText = error.message;
+            } finally {
+                btn.innerText = "Send Reset Link";
+            }
+        }
+
+        async function resetPassword() {
+            const newPassword = document.getElementById('newPasswordInput').value;
+            const btn = document.getElementById('resetBtn');
+            const err = document.getElementById('resetError');
+            const success = document.getElementById('resetSuccess');
+            
+            if (!newPassword || newPassword.length < 6) return err.innerText = "Password must be at least 6 characters.";
+            
+            btn.innerText = "Updating...";
+            err.innerText = ""; success.innerText = "";
+            
+            try {
+                const res = await fetch(`${API_URL}/admin/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: currentResetToken, new_password: newPassword })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Reset failed");
+                
+                success.innerText = "Password successfully updated! You can now log in.";
+                document.getElementById('newPasswordInput').value = '';
+                btn.classList.add('hidden'); // hide button after success
+            } catch (error) {
+                err.innerText = error.message;
+            } finally {
+                if(!btn.classList.contains('hidden')) btn.innerText = "Update Password";
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            document.getElementById('authContainer').classList.remove('hidden');
+            document.getElementById('loggedInUser').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            showForm('loginForm');
+            if (map) { map.remove(); map = null; }
         }
 
         // --- Dashboard Data Loading ---
-        async function getFreshToken() {
-            const user = auth.currentUser;
-            if (!user) throw new Error("Not logged in");
-            // Force refresh only if expired, otherwise returns current valid token
-            return await user.getIdToken();
-        }
-
-        async function loadDashboard() {
-            document.getElementById('errorText').innerText = "Loading dashboard...";
-            document.getElementById('dashboardContent').classList.add('hidden');
-
+        async function loadDashboard(token) {
+            document.getElementById('authContainer').classList.add('hidden');
+            
             try {
-                const token = await getFreshToken();
-                
-                // Fetch stats (This hits the verify_admin endpoint)
-                const statsResponse = await fetch(`${globalApiUrl}/admin/dashboard`, {
+                const statsResponse = await fetch(`${API_URL}/admin/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (!statsResponse.ok) {
-                    if (statsResponse.status === 403) {
-                        await auth.signOut();
-                        throw new Error("Access denied. Your account is not authorized as an admin on the backend.");
+                    if (statsResponse.status === 401 || statsResponse.status === 403) {
+                        logout();
+                        document.getElementById('loginError').innerText = "Session expired or access denied.";
+                        return;
                     }
                     throw new Error("Authentication failed.");
                 }
 
                 const statsData = await statsResponse.json();
                 
+                document.getElementById('loggedInUser').classList.remove('hidden');
                 document.getElementById('dashboardContent').classList.remove('hidden');
-                document.getElementById('errorText').innerText = "";
 
                 document.getElementById('statUsers').innerText = statsData.total_users;
                 document.getElementById('statActive').innerText = statsData.active_incidents;
                 document.getElementById('statResolved').innerText = statsData.resolved_incidents;
 
                 initMap();
-                await fetchIncidents();
+                await fetchIncidents(token);
 
             } catch (err) {
-                document.getElementById('errorText').innerText = err.message;
+                logout();
+                document.getElementById('loginError').innerText = err.message;
             }
         }
 
-        async function fetchIncidents() {
+        async function fetchIncidents(token = localStorage.getItem('adminToken')) {
             try {
-                const token = await getFreshToken();
-                const response = await fetch(`${globalApiUrl}/admin/incidents`, {
+                const response = await fetch(`${API_URL}/admin/incidents`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!response.ok) throw new Error("Failed to fetch incidents");
@@ -320,7 +402,6 @@
                 applyFilters();
             } catch (err) {
                 console.error(err);
-                document.getElementById('errorText').innerText = "Error refreshing map data.";
             }
         }
 
@@ -328,7 +409,6 @@
         function initMap() {
             if (map) return;
             map = L.map('map').setView([20.5937, 78.9629], 4);
-            
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
                 subdomains: 'abcd',
@@ -338,7 +418,6 @@
 
         function applyFilters() {
             const statusFilter = document.getElementById('statusFilter').value;
-            
             let filtered = allIncidents;
             if (statusFilter !== 'ALL') {
                 if (statusFilter === 'ACTIVE') {
@@ -347,7 +426,6 @@
                     filtered = allIncidents.filter(inc => inc.status !== 'ACTIVE');
                 }
             }
-
             renderMapMarkers(filtered);
             renderIncidentList(filtered);
         }
@@ -365,21 +443,14 @@
 
             incidents.forEach(inc => {
                 if (!inc.locations || inc.locations.length === 0) return;
-                
                 const latestLoc = inc.locations[inc.locations.length - 1];
                 const lat = latestLoc.latitude;
                 const lng = latestLoc.longitude;
                 bounds.push([lat, lng]);
 
                 const color = getMarkerColor(inc.status);
-                
                 const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color};"></div>`;
-                const icon = L.divIcon({
-                    html: markerHtml,
-                    className: 'custom-leaflet-marker',
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
-                });
+                const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
 
                 const dateStr = new Date(inc.start_time).toLocaleString();
                 const userName = inc.user?.name || inc.user?.email || `User ${inc.user_id}`;
@@ -409,15 +480,12 @@
                 markers.push(marker);
             });
 
-            if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-            }
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
         }
 
         function renderIncidentList(incidents) {
             const list = document.getElementById('incidentList');
             list.innerHTML = '';
-            
             if (incidents.length === 0) {
                 list.innerHTML = '<div style="color: #94a3b8; text-align: center; margin-top: 1rem;">No incidents match filters</div>';
                 return;
@@ -438,7 +506,6 @@
                 if (latestLoc) {
                     const staleMsg = (new Date() - new Date(latestLoc.timestamp)) > 3600000 ? ' (Stale)' : '';
                     locText = `${latestLoc.latitude.toFixed(5)}, ${latestLoc.longitude.toFixed(5)} &plusmn;${latestLoc.accuracy}m${staleMsg}`;
-                    
                     const mapsLink = `https://www.google.com/maps/search/?api=1&query=${latestLoc.latitude},${latestLoc.longitude}`;
                     const summary = `SOS ALERT: ${userName}. Status: ${inc.status}. Location: ${mapsLink} Time: ${dateStr}`;
                     
@@ -469,9 +536,7 @@
                     if (latestLoc) {
                         map.setView([latestLoc.latitude, latestLoc.longitude], 16);
                         markers.forEach(m => {
-                            if (m.getLatLng().lat === latestLoc.latitude && m.getLatLng().lng === latestLoc.longitude) {
-                                m.openPopup();
-                            }
+                            if (m.getLatLng().lat === latestLoc.latitude && m.getLatLng().lng === latestLoc.longitude) m.openPopup();
                         });
                     }
                 };

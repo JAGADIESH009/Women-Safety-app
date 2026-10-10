@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import users, contacts, incidents, locations, admin
+from api import users, contacts, incidents, locations, admin, admin_auth
 from dotenv import load_dotenv
 import os
+from database.database import engine
+from database.models import Base
+
+# Auto-create tables (safe if they already exist)
+Base.metadata.create_all(bind=engine)
 
 # Ensure environment variables are loaded
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +35,7 @@ app.include_router(contacts.router)
 app.include_router(incidents.router)
 app.include_router(locations.router)
 app.include_router(admin.router)
+app.include_router(admin_auth.router)
 
 @app.get("/")
 def read_root():
