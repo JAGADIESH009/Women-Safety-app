@@ -8,6 +8,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    
+    <!-- Firebase V8 Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+
     <style>
         :root {
             --bg-color: #0d0f12;
@@ -128,13 +133,18 @@
     <div class="container">
         <header>
             <h1>SafeHer Admin</h1>
+            
+            <!-- Login Form -->
             <div class="login-section" id="authSection">
-                <input type="text" id="tokenInput" placeholder="Enter Firebase Bearer Token...">
-                <input type="text" id="apiUrlInput" placeholder="API Base URL (optional)" value="https://women-safety-app-xo2h.onrender.com">
-                <button onclick="loadDashboard()">Connect</button>
+                <input type="email" id="emailInput" placeholder="Admin Email" required>
+                <input type="password" id="passwordInput" placeholder="Password" required>
+                <button onclick="loginFirebase()" id="loginBtn">Log In</button>
             </div>
-            <div id="loggedInUser" class="hidden">
-                <span class="status-badge status-RESOLVED">Connected</span>
+            
+            <!-- Authenticated User Profile -->
+            <div id="loggedInUser" class="hidden" style="display: flex; gap: 1rem; align-items: center;">
+                <span class="status-badge status-RESOLVED" id="userEmailBadge">Connected</span>
+                <button class="btn-small" onclick="logoutFirebase()">Log Out</button>
             </div>
         </header>
 
@@ -183,48 +193,106 @@
     </div>
 
     <script>
+        // --- Firebase Configuration & Initialization ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC51tyvDN_2xKimU_PAbTd2GyZyiGydsl4",
+            authDomain: "women-protection-project.firebaseapp.com",
+            projectId: "women-protection-project",
+            storageBucket: "women-protection-project.firebasestorage.app",
+            messagingSenderId: "592378767800",
+            appId: "1:592378767800:web:69dd4029293212612e474d"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        // --- Global State ---
         let map;
         let markers = [];
         let allIncidents = [];
-        let globalToken = '';
-        let globalApiUrl = '';
+        const globalApiUrl = 'https://women-safety-app-xo2h.onrender.com';
 
-        function initMap() {
-            if (map) return;
-            map = L.map('map').setView([20.5937, 78.9629], 4); // Default to India
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }).addTo(map);
-        }
+        // --- Authentication Flow ---
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // User is signed in
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('loggedInUser').classList.remove('hidden');
+                document.getElementById('userEmailBadge').innerText = user.email;
+                
+                // Initialize Dashboard securely
+                await loadDashboard();
+            } else {
+                // User is signed out
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('loggedInUser').classList.add('hidden');
+                document.getElementById('dashboardContent').classList.add('hidden');
+                
+                if (map) {
+                    map.remove();
+                    map = null;
+                }
+            }
+        });
 
-        async function loadDashboard() {
-            globalToken = document.getElementById('tokenInput').value.trim();
-            globalApiUrl = document.getElementById('apiUrlInput').value.trim() || 'https://women-safety-app-xo2h.onrender.com';
+        async function loginFirebase() {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('errorText');
             
-            if (!globalToken) {
-                document.getElementById('errorText').innerText = "Please provide an admin bearer token.";
+            if (!email || !password) {
+                err.innerText = "Please enter your email and password.";
                 return;
             }
             
-            document.getElementById('errorText').innerText = "Loading...";
+            btn.innerText = "Authenticating...";
+            err.innerText = "";
+            
+            try {
+                // Persistent session is default in web SDK
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                err.innerText = error.message;
+            } finally {
+                btn.innerText = "Log In";
+            }
+        }
+
+        async function logoutFirebase() {
+            await auth.signOut();
+            document.getElementById('errorText').innerText = "You have been logged out.";
+        }
+
+        // --- Dashboard Data Loading ---
+        async function getFreshToken() {
+            const user = auth.currentUser;
+            if (!user) throw new Error("Not logged in");
+            // Force refresh only if expired, otherwise returns current valid token
+            return await user.getIdToken();
+        }
+
+        async function loadDashboard() {
+            document.getElementById('errorText').innerText = "Loading dashboard...";
+            document.getElementById('dashboardContent').classList.add('hidden');
 
             try {
-                // Fetch stats
+                const token = await getFreshToken();
+                
+                // Fetch stats (This hits the verify_admin endpoint)
                 const statsResponse = await fetch(`${globalApiUrl}/admin/dashboard`, {
-                    headers: { 'Authorization': `Bearer ${globalToken}` }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (!statsResponse.ok) {
-                    throw new Error(statsResponse.status === 403 ? "Access denied. You are not an admin." : "Authentication failed.");
+                    if (statsResponse.status === 403) {
+                        await auth.signOut();
+                        throw new Error("Access denied. Your account is not authorized as an admin on the backend.");
+                    }
+                    throw new Error("Authentication failed.");
                 }
 
                 const statsData = await statsResponse.json();
                 
-                document.getElementById('authSection').classList.add('hidden');
-                document.getElementById('loggedInUser').classList.remove('hidden');
                 document.getElementById('dashboardContent').classList.remove('hidden');
                 document.getElementById('errorText').innerText = "";
 
@@ -242,8 +310,9 @@
 
         async function fetchIncidents() {
             try {
+                const token = await getFreshToken();
                 const response = await fetch(`${globalApiUrl}/admin/incidents`, {
-                    headers: { 'Authorization': `Bearer ${globalToken}` }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!response.ok) throw new Error("Failed to fetch incidents");
                 
@@ -253,6 +322,18 @@
                 console.error(err);
                 document.getElementById('errorText').innerText = "Error refreshing map data.";
             }
+        }
+
+        // --- Map & UI Logic ---
+        function initMap() {
+            if (map) return;
+            map = L.map('map').setView([20.5937, 78.9629], 4);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
         }
 
         function applyFilters() {
@@ -280,13 +361,11 @@
         function renderMapMarkers(incidents) {
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            
             const bounds = [];
 
             incidents.forEach(inc => {
                 if (!inc.locations || inc.locations.length === 0) return;
                 
-                // Get latest location
                 const latestLoc = inc.locations[inc.locations.length - 1];
                 const lat = latestLoc.latitude;
                 const lng = latestLoc.longitude;
