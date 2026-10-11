@@ -211,44 +211,44 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     onClick={() => { onClose(); if (onNavigate) onNavigate('dashboard'); }}
-                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors"
+                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div>
-                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Safety Dashboard</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">Readiness & drill test</p>
+                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Dashboard</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">Personalized safety summary</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-transform group-hover:translate-x-1" />
                   </button>
 
                   <button
                     onClick={() => { onClose(); if (onNavigate) onNavigate('contacts'); }}
-                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors"
+                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div>
-                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Trusted Contacts</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">Sync emergency recipients</p>
+                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Emergency Contacts</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">Manage synced recipients</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-transform group-hover:translate-x-1" />
                   </button>
 
                   <button
-                    onClick={() => { onClose(); if (onNavigate) onNavigate('reports'); }}
-                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors"
+                    onClick={() => { onClose(); if (onNavigate) onNavigate('resources'); }}
+                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div>
-                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Incident Reports</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">Community safety feed</p>
+                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Safety Resources</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">Verified national helplines</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-transform group-hover:translate-x-1" />
                   </button>
 
                   <button
                     onClick={() => { onClose(); if (onNavigate) onNavigate('profile'); }}
-                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors"
+                    className="p-3 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-left flex items-center justify-between group transition-colors cursor-pointer"
                   >
                     <div>
-                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Medical Profile</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">Blood group & allergies</p>
+                      <p className="text-xs font-bold text-[var(--color-text-primary)]">Profile & Medical</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">Blood group & emergency phone</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-transform group-hover:translate-x-1" />
                   </button>
@@ -491,7 +491,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           Continue as Guest
                         </p>
                         <p className="text-[11px] text-[var(--color-text-secondary)]">
-                          Explore safety dashboard, test fake call & simulate SOS drills without an account
+                          Immediate access to national emergency hotlines and safety guidelines without an account
                         </p>
                       </div>
                     </div>

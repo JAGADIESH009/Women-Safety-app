@@ -5,12 +5,10 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AccountModal } from './components/AccountModal';
 
-// Application Views
+// Primary Application Views
 import { WelcomeAuthView } from './components/WelcomeAuthView';
 import { WebDashboard } from './components/WebDashboard';
-import { Features } from './components/Features';
 import { ContactsManager } from './components/ContactsManager';
-import { IncidentReporting } from './components/IncidentReporting';
 import { UserProfileView } from './components/UserProfileView';
 import { SafetyResourcesView } from './components/SafetyResourcesView';
 import { LegalViews } from './components/LegalViews';
@@ -32,11 +30,9 @@ export const AppContent: React.FC = () => {
       const validAppViews: PageView[] = [
         'welcome',
         'dashboard',
-        'features',
         'contacts',
         'resources',
         'profile',
-        'reports',
         'privacy',
         'terms',
       ];
@@ -52,7 +48,6 @@ export const AppContent: React.FC = () => {
           setCurrentView('welcome');
         }
       } else if (validAppViews.includes(hash as PageView)) {
-        // If guest or authenticated, or accessing public resource/terms/privacy
         setCurrentView(hash as PageView);
       } else {
         setCurrentView('not-found');
@@ -107,24 +102,9 @@ export const AppContent: React.FC = () => {
           />
         );
 
-      case 'features':
-        return (
-          <div className="py-6">
-            <Features onExploreDashboard={() => navigateTo('dashboard')} />
-          </div>
-        );
-
       case 'contacts':
         return (
           <ContactsManager 
-            onNavigate={navigateTo} 
-            onOpenAccountModal={() => setAccountModalOpen(true)} 
-          />
-        );
-
-      case 'reports':
-        return (
-          <IncidentReporting 
             onNavigate={navigateTo} 
             onOpenAccountModal={() => setAccountModalOpen(true)} 
           />

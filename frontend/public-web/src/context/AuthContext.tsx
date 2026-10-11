@@ -11,7 +11,7 @@ import {
   onAuthStateChanged,
   type User 
 } from '../config/firebase';
-import { api } from '../services/api';
+import { api, clearUserLocalData } from '../services/api';
 import type { UserProfile } from '../types';
 
 interface AuthContextType {
@@ -67,8 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync profile when auth state changes
   useEffect(() => {
     if (!auth) {
-      const local = api.getLocalProfile();
-      setProfile(local);
+      setProfile(null);
       setLoading(false);
       return;
     }
@@ -81,36 +80,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsGuest(false);
           localStorage.removeItem(GUEST_STORAGE_KEY);
           
-          // Try fetching remote profile from backend
-          const remote = await api.getMyProfile();
-          if (remote) {
-            setProfile(remote);
-            api.saveLocalProfile(remote);
-          } else {
-            // Create initial profile from Firebase user data
-            const fallbackProfile: UserProfile = {
-              uid: currentUser.uid,
-              email: currentUser.email || '',
-              name: currentUser.displayName || 'SafeHer User',
-              phone: currentUser.phoneNumber || '',
-              bloodGroup: 'O+',
-              isSyncedWithCloud: true,
-            };
-            setProfile(fallbackProfile);
-            api.saveLocalProfile(fallbackProfile);
-            
-            // Sync with backend API
-            api.syncUser({
-              email: fallbackProfile.email,
-              name: fallbackProfile.name,
-              phone: fallbackProfile.phone,
-              blood_group: fallbackProfile.bloodGroup,
-            }).catch(() => {});
+          try {
+            // First attempt to fetch existing remote profile
+            const remote = await api.getMyProfile();
+            if (remote) {
+              setProfile(remote);
+            } else {
+              // Create initial profile from Firebase user data
+              const fallbackProfile: UserProfile = {
+                uid: currentUser.uid,
+                email: currentUser.email || '',
+                name: currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'SafeHer User'),
+                phone: currentUser.phoneNumber || '',
+                bloodGroup: 'O+',
+                isSyncedWithCloud: true,
+              };
+              setProfile(fallbackProfile);
+              
+              // Sync with backend API
+              api.syncUser({
+                email: fallbackProfile.email,
+                name: fallbackProfile.name,
+                phone: fallbackProfile.phone,
+                blood_group: fallbackProfile.bloodGroup,
+              }).then((synced) => {
+                if (synced) setProfile(synced);
+              }).catch(() => {});
+            }
+          } catch (e) {
+            console.warn('[SafeHer Auth] Profile synchronization warning:', e);
           }
         } else {
-          // If no authenticated user, load local profile
-          const local = api.getLocalProfile();
-          setProfile(local);
+          setProfile(null);
         }
         setLoading(false);
       },
@@ -162,8 +163,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
 
     try {
-      await signInWithPopup(auth, googleProvider);
-      setAuthSuccess('Signed in successfully with Google.');
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
+      setIsGuest(false);
+      localStorage.removeItem(GUEST_STORAGE_KEY);
+      
+      const remote = await api.getMyProfile();
+      if (remote) {
+        setProfile(remote);
+      } else {
+        const fallbackProfile: UserProfile = {
+          uid: result.user.uid,
+          email: result.user.email || '',
+          name: result.user.displayName || 'SafeHer User',
+          phone: result.user.phoneNumber || '',
+          bloodGroup: 'O+',
+          isSyncedWithCloud: true,
+        };
+        setProfile(fallbackProfile);
+        api.syncUser({
+          email: fallbackProfile.email,
+          name: fallbackProfile.name,
+          phone: fallbackProfile.phone,
+          blood_group: fallbackProfile.bloodGroup,
+        }).catch(() => {});
+      }
+
+      setAuthSuccess('Successfully signed in with Google.');
       return true;
     } catch (err) {
       setAuthError(formatFirebaseError(err));
@@ -183,8 +209,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), pass);
-      setAuthSuccess('Signed in successfully.');
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      setUser(userCredential.user);
+      setIsGuest(false);
+      localStorage.removeItem(GUEST_STORAGE_KEY);
+
+      const remote = await api.getMyProfile();
+      if (remote) {
+        setProfile(remote);
+      } else {
+        const fallbackProfile: UserProfile = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email || '',
+          name: userCredential.user.displayName || email.split('@')[0],
+          phone: '',
+          bloodGroup: 'O+',
+          isSyncedWithCloud: true,
+        };
+        setProfile(fallbackProfile);
+        api.syncUser({
+          email: fallbackProfile.email,
+          name: fallbackProfile.name,
+          phone: fallbackProfile.phone,
+          blood_group: fallbackProfile.bloodGroup,
+        }).catch(() => {});
+      }
+
+      setAuthSuccess('Successfully signed in.');
       return true;
     } catch (err) {
       setAuthError(formatFirebaseError(err));
@@ -195,9 +246,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerWithEmail = async (
-    email: string,
-    pass: string,
-    name: string,
+    email: string, 
+    pass: string, 
+    name: string, 
     phone?: string
   ): Promise<boolean> => {
     if (!auth) {
@@ -209,32 +260,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
 
     try {
-      const res = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-      if (res.user && name.trim()) {
-        await updateProfile(res.user, { displayName: name.trim() });
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      
+      try {
+        await updateProfile(userCredential.user, { displayName: name });
+      } catch (e) {
+        console.warn('Failed to update displayName on registration:', e);
       }
 
-      // Initial user profile
-      const newProfile: UserProfile = {
-        uid: res.user.uid,
-        email: res.user.email || email,
-        name: name.trim() || 'SafeHer User',
-        phone: phone?.trim() || '',
+      setUser(userCredential.user);
+      setIsGuest(false);
+      localStorage.removeItem(GUEST_STORAGE_KEY);
+
+      const initialProfile: UserProfile = {
+        uid: userCredential.user.uid,
+        email,
+        name,
+        phone: phone || '',
         bloodGroup: 'O+',
         isSyncedWithCloud: true,
       };
-      setProfile(newProfile);
-      api.saveLocalProfile(newProfile);
+      setProfile(initialProfile);
 
-      // Push to backend
-      api.syncUser({
-        email: newProfile.email,
-        name: newProfile.name,
-        phone: newProfile.phone,
-        blood_group: newProfile.bloodGroup,
-      }).catch(() => {});
+      // Sync user profile to backend
+      await api.syncUser({
+        email,
+        name,
+        phone: phone || '',
+        blood_group: 'O+',
+      });
 
-      setAuthSuccess('Account created successfully! Welcome to SafeHer.');
+      setAuthSuccess('Account created successfully.');
       return true;
     } catch (err) {
       setAuthError(formatFirebaseError(err));
@@ -272,7 +328,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...updates,
     };
     setProfile(merged);
-    api.saveLocalProfile(merged);
 
     // If user is authenticated, sync with backend & Firebase
     if (user && auth?.currentUser) {
@@ -301,11 +356,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     if (!auth) return;
     try {
+      const currentUid = user?.uid;
       await firebaseSignOut(auth);
+      clearUserLocalData(currentUid);
       setUser(null);
+      setProfile(null);
       setIsGuest(false);
       localStorage.removeItem(GUEST_STORAGE_KEY);
-      setProfile(api.getLocalProfile());
       setAuthSuccess('Signed out successfully.');
     } catch (err) {
       setAuthError(formatFirebaseError(err));
@@ -315,8 +372,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const continueAsGuest = () => {
     setIsGuest(true);
     localStorage.setItem(GUEST_STORAGE_KEY, 'true');
+    setUser(null);
+    setProfile(null);
     setAuthError(null);
-    setAuthSuccess('Exploring SafeHer in Guest Mode. All public features are accessible.');
+    setAuthSuccess('Browsing in Guest Mode. Public safety guidelines & helplines are available.');
   };
 
   const clearAuthMessages = () => {

@@ -8,7 +8,6 @@ import {
   Info,
   Navigation
 } from 'lucide-react';
-import { api } from '../services/api';
 import type { IncidentReport, PageView } from '../types';
 
 interface IncidentReportingProps {
@@ -40,9 +39,24 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = () => {
     loadHistory();
   }, []);
 
+const getStoredReports = (): IncidentReport[] => {
+  try {
+    const s = localStorage.getItem('safeher_local_reports');
+    return s ? JSON.parse(s) : [];
+  } catch {
+    return [];
+  }
+};
+
+const storeLocalReport = (report: IncidentReport) => {
+  try {
+    const cur = getStoredReports();
+    localStorage.setItem('safeher_local_reports', JSON.stringify([report, ...cur]));
+  } catch {}
+};
+
   const loadHistory = () => {
-    const list = api.getLocalReports();
-    setReportHistory(list);
+    setReportHistory(getStoredReports());
   };
 
   const requestBrowserLocation = () => {
@@ -105,7 +119,7 @@ export const IncidentReporting: React.FC<IncidentReportingProps> = () => {
       ],
     };
 
-    api.saveLocalReport(newReport);
+    storeLocalReport(newReport);
     setSubmittedReport(newReport);
     loadHistory();
     setIsSubmitting(false);

@@ -34,19 +34,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
         {/* Navigation Links */}
         <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
-          <button onClick={() => handleNav('dashboard')} className="hover:text-[var(--color-primary)] transition-colors">
+          <button onClick={() => handleNav('dashboard')} className="hover:text-[var(--color-primary)] transition-colors cursor-pointer">
             Dashboard
           </button>
-          <button onClick={() => handleNav('features')} className="hover:text-[var(--color-primary)] transition-colors">
-            Safety Features
+          <button onClick={() => handleNav('contacts')} className="hover:text-[var(--color-primary)] transition-colors cursor-pointer">
+            Emergency Contacts
           </button>
-          <button onClick={() => handleNav('contacts')} className="hover:text-[var(--color-primary)] transition-colors">
-            Trusted Contacts
+          <button onClick={() => handleNav('resources')} className="hover:text-[var(--color-primary)] transition-colors cursor-pointer">
+            Safety Resources
           </button>
-          <button onClick={() => handleNav('resources')} className="hover:text-[var(--color-primary)] transition-colors">
-            Resources
-          </button>
-          <button onClick={() => handleNav('profile')} className="hover:text-[var(--color-primary)] transition-colors">
+          <button onClick={() => handleNav('profile')} className="hover:text-[var(--color-primary)] transition-colors cursor-pointer">
             Profile
           </button>
           <span className="text-[var(--color-text-muted)]">•</span>
@@ -71,7 +68,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         {/* Verification badge */}
         <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)]">
           <ShieldCheck size={14} className="text-emerald-500" />
-          <span>© {new Date().getFullYear()} SafeHer</span>
+          <span>© 2026 SafeHer</span>
         </div>
 
       </div>

@@ -4,10 +4,24 @@ import type { EmergencyContact, UserProfile } from '../types';
 export const API_BASE_URL = 
   import.meta.env.VITE_API_URL || 'https://women-safety-app-xo2h.onrender.com';
 
-const STORAGE_KEYS = {
-  CONTACTS: 'safeher_web_contacts',
-  PROFILE: 'safeher_web_profile',
-  REPORTS: 'safeher_web_reports',
+const getUserStorageKey = (prefix: string, uid?: string | null): string => {
+  if (!uid) return '';
+  return `safeher_${prefix}_${uid}`;
+};
+
+export const clearUserLocalData = (uid?: string | null): void => {
+  try {
+    if (uid) {
+      localStorage.removeItem(getUserStorageKey('contacts', uid));
+      localStorage.removeItem(getUserStorageKey('profile', uid));
+    }
+    // Also clean up any legacy global keys to prevent data leakage across sessions
+    localStorage.removeItem('safeher_web_contacts');
+    localStorage.removeItem('safeher_web_profile');
+    localStorage.removeItem('safeher_web_reports');
+  } catch (e) {
+    console.warn('[SafeHer Storage] Failed to clear user local data:', e);
+  }
 };
 
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -19,7 +33,7 @@ const getAuthHeaders = async (): Promise<Record<string, string>> => {
       const token = await auth.currentUser.getIdToken();
       headers['Authorization'] = `Bearer ${token}`;
     } catch (e) {
-      console.warn('[SafeHer API] Failed to get Firebase ID token:', e);
+      console.warn('[SafeHer API] Failed to retrieve Firebase ID token:', e);
     }
   }
   return headers;
@@ -53,7 +67,6 @@ export const api = {
   }): Promise<UserProfile | null> {
     const headers = await getAuthHeaders();
     if (!headers['Authorization']) {
-      // Local fallback
       return null;
     }
 
@@ -68,7 +81,7 @@ export const api = {
         throw new Error(`Sync failed (${res.status}): ${errText}`);
       }
       const data = await res.json();
-      return {
+      const profile: UserProfile = {
         uid: data.firebase_uid,
         email: data.email,
         name: data.name || '',
@@ -76,74 +89,134 @@ export const api = {
         bloodGroup: data.blood_group || 'O+',
         isSyncedWithCloud: true,
       };
+      if (auth?.currentUser?.uid) {
+        localStorage.setItem(
+          getUserStorageKey('profile', auth.currentUser.uid),
+          JSON.stringify(profile)
+        );
+      }
+      return profile;
     } catch (err) {
-      console.warn('[SafeHer API] User sync remote error, keeping local copy:', err);
+      console.warn('[SafeHer API] User sync remote warning:', err);
       return null;
     }
   },
 
   async getMyProfile(): Promise<UserProfile | null> {
     const headers = await getAuthHeaders();
-    if (!headers['Authorization']) return null;
+    if (!headers['Authorization'] || !auth?.currentUser) return null;
 
     try {
       const res = await fetch(`${API_BASE_URL}/users/me`, {
         headers,
       });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return {
-        uid: data.firebase_uid,
-        email: data.email,
-        name: data.name || '',
-        phone: data.phone || '',
-        bloodGroup: data.blood_group || 'O+',
-        isSyncedWithCloud: true,
-      };
+      if (res.ok) {
+        const data = await res.json();
+        const profile: UserProfile = {
+          uid: data.firebase_uid,
+          email: data.email,
+          name: data.name || '',
+          phone: data.phone || '',
+          bloodGroup: data.blood_group || 'O+',
+          isSyncedWithCloud: true,
+        };
+        localStorage.setItem(
+          getUserStorageKey('profile', auth.currentUser.uid),
+          JSON.stringify(profile)
+        );
+        return profile;
+      }
+      // If 404, user might not have synced yet, sync now
+      if (res.status === 404) {
+        return await this.syncUser({
+          email: auth.currentUser.email || '',
+          name: auth.currentUser.displayName || '',
+          phone: auth.currentUser.phoneNumber || '',
+          blood_group: 'O+',
+        });
+      }
+      return null;
     } catch (err) {
       console.warn('[SafeHer API] Profile fetch error:', err);
+      if (auth?.currentUser?.uid) {
+        const cached = localStorage.getItem(getUserStorageKey('profile', auth.currentUser.uid));
+        if (cached) {
+          try {
+            return JSON.parse(cached);
+          } catch {
+            // ignore
+          }
+        }
+      }
       return null;
     }
   },
 
   // --- Contacts ---
   async getContacts(): Promise<EmergencyContact[]> {
-    const headers = await getAuthHeaders();
-    if (headers['Authorization']) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/contacts/`, {
-          headers,
-        });
-        if (res.ok) {
-          const remoteContacts = await res.json();
-          if (Array.isArray(remoteContacts) && remoteContacts.length > 0) {
-            localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(remoteContacts));
-            return remoteContacts;
-          }
-        }
-      } catch (err) {
-        console.warn('[SafeHer API] Contacts remote fetch fallback to local:', err);
-      }
+    if (!auth?.currentUser) {
+      // Guests strictly have 0 personal contacts
+      return [];
     }
 
-    // Local / Guest fallback
-    try {
-      const local = localStorage.getItem(STORAGE_KEYS.CONTACTS);
-      if (local) {
-        return JSON.parse(local);
-      }
-    } catch {
-      // ignore
+    const uid = auth.currentUser.uid;
+    const headers = await getAuthHeaders();
+    if (!headers['Authorization']) {
+      return [];
     }
-    return [
-      {
-        id: 1,
-        name: 'Family Emergency (Default)',
-        phone: '+91 98765 43210',
-        relation: 'Parent',
-        is_primary: true,
-      },
-    ];
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/contacts/`, {
+        headers,
+      });
+
+      if (res.ok) {
+        const remoteContacts = await res.json();
+        if (Array.isArray(remoteContacts)) {
+          // Real backend data (even if empty array [])
+          localStorage.setItem(
+            getUserStorageKey('contacts', uid),
+            JSON.stringify(remoteContacts)
+          );
+          return remoteContacts;
+        }
+      } else if (res.status === 404) {
+        // User profile might not exist on backend yet. Sync profile and retry once.
+        await this.syncUser({
+          email: auth.currentUser.email || '',
+          name: auth.currentUser.displayName || '',
+          phone: auth.currentUser.phoneNumber || '',
+          blood_group: 'O+',
+        });
+        const retryRes = await fetch(`${API_BASE_URL}/contacts/`, { headers });
+        if (retryRes.ok) {
+          const retriedContacts = await retryRes.json();
+          if (Array.isArray(retriedContacts)) {
+            localStorage.setItem(
+              getUserStorageKey('contacts', uid),
+              JSON.stringify(retriedContacts)
+            );
+            return retriedContacts;
+          }
+        }
+      } else {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('[SafeHer API] Contacts remote fetch warning:', err);
+      // Fallback only to this authenticated user's cached contacts
+      const cached = localStorage.getItem(getUserStorageKey('contacts', uid));
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch {
+          // ignore
+        }
+      }
+      throw err;
+    }
+
+    return [];
   },
 
   async createContact(contactData: {
@@ -152,136 +225,77 @@ export const api = {
     relation: string;
     is_primary: boolean;
   }): Promise<EmergencyContact> {
-    const headers = await getAuthHeaders();
-    if (headers['Authorization']) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/contacts/`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(contactData),
-        });
-        if (res.ok) {
-          const created = await res.json();
-          // Update local cache
-          const contacts = await this.getContacts();
-          localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify([...contacts, created]));
-          return created;
-        }
-      } catch (err) {
-        console.warn('[SafeHer API] Create contact remote error, storing locally:', err);
-      }
+    if (!auth?.currentUser) {
+      throw new Error('Authentication required to add emergency contacts.');
     }
 
-    // Local storage fallback for guest or offline
-    const contacts = await this.getContacts();
-    const newContact: EmergencyContact = {
-      id: Date.now(),
-      ...contactData,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...contacts, newContact];
-    localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(updated));
-    return newContact;
+    const headers = await getAuthHeaders();
+    if (!headers['Authorization']) {
+      throw new Error('Valid authentication session required.');
+    }
+
+    const res = await fetch(`${API_BASE_URL}/contacts/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(contactData),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to create contact (${res.status}): ${errorText}`);
+    }
+
+    const created = await res.json();
+    return created;
   },
 
   async updateContact(
     id: number | string,
     contactData: Partial<EmergencyContact>
   ): Promise<EmergencyContact> {
-    const headers = await getAuthHeaders();
-    if (typeof id === 'number' && headers['Authorization']) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/contacts/${id}`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify(contactData),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          return updated;
-        }
-      } catch (err) {
-        console.warn('[SafeHer API] Update contact remote error:', err);
-      }
+    if (!auth?.currentUser) {
+      throw new Error('Authentication required to update emergency contacts.');
     }
 
-    // Local fallback
-    const contacts = await this.getContacts();
-    const idx = contacts.findIndex((c) => String(c.id) === String(id));
-    if (idx !== -1) {
-      contacts[idx] = { ...contacts[idx], ...contactData };
-      localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(contacts));
-      return contacts[idx];
+    const headers = await getAuthHeaders();
+    if (!headers['Authorization']) {
+      throw new Error('Valid authentication session required.');
     }
-    throw new Error('Contact not found');
+
+    const res = await fetch(`${API_BASE_URL}/contacts/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(contactData),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to update contact (${res.status}): ${errorText}`);
+    }
+
+    const updated = await res.json();
+    return updated;
   },
 
   async deleteContact(id: number | string): Promise<boolean> {
+    if (!auth?.currentUser) {
+      throw new Error('Authentication required to delete emergency contacts.');
+    }
+
     const headers = await getAuthHeaders();
-    if (typeof id === 'number' && headers['Authorization']) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/contacts/${id}`, {
-          method: 'DELETE',
-          headers,
-        });
-        if (res.ok || res.status === 204) {
-          // Success
-        }
-      } catch (err) {
-        console.warn('[SafeHer API] Delete contact remote error:', err);
-      }
+    if (!headers['Authorization']) {
+      throw new Error('Valid authentication session required.');
     }
 
-    const contacts = await this.getContacts();
-    const filtered = contacts.filter((c) => String(c.id) !== String(id));
-    localStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(filtered));
-    return true;
-  },
+    const res = await fetch(`${API_BASE_URL}/contacts/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
 
-  // --- Local Persistence Helpers for Profile & Reports ---
-  getLocalProfile(): UserProfile {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // ignore
+    if (res.ok || res.status === 204) {
+      return true;
     }
-    return {
-      uid: 'guest-' + Math.random().toString(36).substring(2, 9),
-      email: 'guest@safeher.app',
-      name: 'SafeHer Guest',
-      phone: '',
-      bloodGroup: 'O+',
-      medicalNotes: '',
-      allergies: '',
-      isSyncedWithCloud: false,
-    };
-  },
-
-  saveLocalProfile(profile: UserProfile): void {
-    try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-    } catch (e) {
-      console.warn('Failed to save local profile:', e);
-    }
-  },
-
-  getLocalReports(): any[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.REPORTS);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // ignore
-    }
-    return [];
-  },
-
-  saveLocalReport(report: any): void {
-    try {
-      const current = this.getLocalReports();
-      localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify([report, ...current]));
-    } catch (e) {
-      console.warn('Failed to save local report:', e);
-    }
+    const errorText = await res.text();
+    throw new Error(`Failed to delete contact (${res.status}): ${errorText}`);
   },
 };

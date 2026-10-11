@@ -10,15 +10,27 @@ import os
 def init_firebase():
     if not firebase_admin._apps:
         cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if not cred_path or not os.path.exists(cred_path):
+            local_cred = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "firebase-credentials.json")
+            if os.path.exists(local_cred):
+                cred_path = local_cred
+
         if cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
         else:
-            raise ValueError(
-                "GOOGLE_APPLICATION_CREDENTIALS environment variable is not set "
-                "or points to a non-existent file. A valid Firebase service account "
-                "JSON file is required for token verification."
-            )
+            raw_json = os.environ.get("FIREBASE_CREDENTIALS_JSON") or os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+            if raw_json:
+                import json
+                cred_dict = json.loads(raw_json)
+                cred = credentials.Certificate(cred_dict)
+                firebase_admin.initialize_app(cred)
+            else:
+                raise ValueError(
+                    "GOOGLE_APPLICATION_CREDENTIALS environment variable is not set "
+                    "or points to a non-existent file. A valid Firebase service account "
+                    "JSON file is required for token verification."
+                )
             
 init_firebase()
 
@@ -58,8 +70,23 @@ def get_current_user(
 ) -> User:
     user = db.query(User).filter(User.firebase_uid == uid).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found in database",
+        # Auto-provision User record for verified Firebase UID
+        user = User(
+            firebase_uid=uid,
+            email=f"{uid}@safeher.app",
+            name="SafeHer User"
         )
+        db.add(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            user = db.query(User).filter(User.firebase_uid == uid).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found in database",
+                )
     return user
+

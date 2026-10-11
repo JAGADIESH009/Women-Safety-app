@@ -369,10 +369,10 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
               >
                 <Compass size={14} className="text-[var(--color-primary)]" />
                 <span>Continue as Guest</span>
-                <span className="text-[10px] text-[var(--color-text-muted)] font-normal hidden sm:inline">(Explore dashboard tools)</span>
+                <span className="text-[10px] text-[var(--color-text-muted)] font-normal hidden sm:inline">(View public resources & helplines)</span>
               </button>
               <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
-                Guest sessions store contacts locally. No account required.
+                Guest mode provides immediate access to emergency helplines. Personal contacts require sign-in.
               </p>
             </div>
 
