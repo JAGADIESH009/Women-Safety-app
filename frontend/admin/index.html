@@ -1,123 +1,601 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeHer - Admin Dashboard & Incident Map</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>SafeHer - Safety Operations Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
     <style>
         :root {
-            --bg-color: #0d0f12;
-            --surface-color: rgba(255, 255, 255, 0.03);
-            --border-color: rgba(255, 255, 255, 0.08);
-            --accent-primary: #f43f5e;
-            --accent-secondary: #8b5cf6;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --success: #10b981;
-            --warning: #f59e0b;
+            /* Light Mode — Warm Cream / Burgundy Palette */
+            --bg-base: #FFFDF9;
+            --bg-surface: #FFFFFF;
+            --bg-surface-elevated: #F7F3EB;
+            --bg-surface-hover: #EFE9DD;
+            --text-primary: #2A161A;
+            --text-secondary: #5E4A4D;
+            --text-muted: #8C777A;
+            --border-subtle: #E8DDD9;
+            --border-medium: #D4C4BF;
+            --brand-primary: #780D2B;
+            --brand-hover: #8E1235;
+            --brand-subtle: rgba(120, 13, 43, 0.08);
+            --brand-border: rgba(120, 13, 43, 0.22);
+            --rose-accent: #B23A5B;
+            
+            --status-emergency: #E11D48;
+            --status-emergency-bg: rgba(225, 29, 72, 0.1);
+            --status-emergency-text: #BE123C;
+            --status-warning: #D97706;
+            --status-warning-bg: rgba(217, 119, 6, 0.1);
+            --status-warning-text: #B45309;
+            --status-success: #059669;
+            --status-success-bg: rgba(5, 150, 105, 0.1);
+            --status-success-text: #047857;
+            
+            --shadow-card: 0 1px 3px rgba(42, 22, 26, 0.06), 0 4px 12px rgba(42, 22, 26, 0.03);
+            --shadow-elevated: 0 4px 16px rgba(42, 22, 26, 0.08), 0 12px 28px rgba(42, 22, 26, 0.05);
+            --shadow-modal: 0 20px 40px rgba(42, 22, 26, 0.22);
+            --map-tile-filter: none;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(244, 63, 94, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
-        }
-        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 2rem; padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            animation: fadeInDown 0.6s ease-out;
-        }
-        h1 {
-            font-weight: 800; font-size: 1.8rem;
-            background: linear-gradient(to right, var(--text-main), var(--text-muted));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .auth-card {
-            background: var(--surface-color); border: 1px solid var(--border-color);
-            border-radius: 16px; padding: 2rem; max-width: 400px; margin: 2rem auto;
-            backdrop-filter: blur(10px);
-        }
-        .auth-form { display: flex; flex-direction: column; gap: 1rem; }
-        input, button, select {
-            font-family: 'Inter', sans-serif;
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.6rem 1rem;
-            border-radius: 8px; outline: none; transition: all 0.3s;
-        }
-        input:focus, select:focus { border-color: var(--accent-secondary); box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2); }
-        button {
-            background: linear-gradient(135deg, var(--accent-secondary), #6d28d9);
-            border: none; cursor: pointer; font-weight: 600; padding: 0.8rem;
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
-        
-        .dashboard-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem; margin-bottom: 2rem;
-        }
-        .stat-card {
-            background: var(--surface-color); border: 1px solid var(--border-color);
-            border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(10px);
-            transition: transform 0.3s;
-        }
-        .stat-card:hover { transform: translateY(-5px); border-color: rgba(255, 255, 255, 0.15); }
-        .stat-card:nth-child(1) { border-top: 3px solid var(--accent-secondary); }
-        .stat-card:nth-child(2) { border-top: 3px solid var(--accent-primary); }
-        .stat-card:nth-child(3) { border-top: 3px solid var(--success); }
-        .stat-title { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
-        .stat-value { font-size: 2.5rem; font-weight: 800; }
 
-        .main-layout {
-            display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;
-            animation: fadeInUp 0.6s ease-out backwards; animation-delay: 0.4s;
+        [data-theme="dark"] {
+            /* Dark Mode — Deep Wine-Black / Rose Palette */
+            --bg-base: #140A0D;
+            --bg-surface: #1E1015;
+            --bg-surface-elevated: #28161D;
+            --bg-surface-hover: #331D25;
+            --text-primary: #FDFBF7;
+            --text-secondary: #E2D5D8;
+            --text-muted: #9E898F;
+            --border-subtle: #361F26;
+            --border-medium: #4B2B35;
+            --brand-primary: #B23A5B;
+            --brand-hover: #C54368;
+            --brand-subtle: rgba(178, 58, 91, 0.16);
+            --brand-border: rgba(178, 58, 91, 0.35);
+            --rose-accent: #E06085;
+            
+            --status-emergency: #F43F5E;
+            --status-emergency-bg: rgba(244, 63, 94, 0.18);
+            --status-emergency-text: #FDA4AF;
+            --status-warning: #F59E0B;
+            --status-warning-bg: rgba(245, 158, 11, 0.18);
+            --status-warning-text: #FDE68A;
+            --status-success: #10B981;
+            --status-success-bg: rgba(16, 185, 129, 0.18);
+            --status-success-text: #6EE7B7;
+            
+            --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.45);
+            --shadow-elevated: 0 6px 20px rgba(0, 0, 0, 0.55);
+            --shadow-modal: 0 24px 50px rgba(0, 0, 0, 0.7);
+            --map-tile-filter: brightness(0.82) invert(1) contrast(1.15) hue-rotate(205deg) saturate(0.65);
         }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.75rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .brand-cluster {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .brand-logo-badge {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #780D2B, #B23A5B);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(120, 13, 43, 0.3);
+            flex-shrink: 0;
+        }
+
+        .brand-title-wrap h1 {
+            font-weight: 800;
+            font-size: 1.35rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .live-ops-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--brand-subtle);
+            border: 1px solid var(--brand-border);
+            color: var(--rose-accent);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-theme-toggle {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-medium);
+            color: var(--text-primary);
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+        .btn-theme-toggle:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--brand-primary);
+        }
+
+        .admin-profile-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-subtle);
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        /* --- Tabs --- */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 0.75rem;
+        }
+
+        .btn-tab {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 1.1rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-surface-elevated);
+        }
+        .btn-tab.active {
+            color: #FFFFFF;
+            background: var(--brand-primary);
+            border-color: var(--brand-primary);
+            box-shadow: 0 2px 8px rgba(120, 13, 43, 0.25);
+        }
+
+        /* --- Overview Stats Grid --- */
+        .stats-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .stat-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.25rem 1.4rem;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 3px solid var(--brand-primary);
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-medium);
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .stat-icon {
+            font-size: 1.1rem;
+            opacity: 0.85;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-primary);
+        }
+
+        .stat-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+
+        /* --- Operations Layout (Left Queue, Right Map) --- */
+        .operations-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+            gap: 1.5rem;
+            align-items: start;
+            margin-bottom: 2rem;
+        }
+
         .panel {
-            background: var(--surface-color); border: 1px solid var(--border-color);
-            border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(10px);
-            display: flex; flex-direction: column;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 1.35rem;
+            box-shadow: var(--shadow-card);
+            min-width: 0; /* Prevents flex/grid clipping */
         }
-        .section-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;}
-        
-        #map { height: 500px; width: 100%; border-radius: 12px; background: #1a1c23; z-index: 1;}
-        
-        .incident-list { flex-grow: 1; overflow-y: auto; max-height: 520px; padding-right: 0.5rem;}
-        .incident-item {
-            padding: 1rem; border: 1px solid var(--border-color); border-radius: 10px;
-            margin-bottom: 1rem; cursor: pointer; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            background: rgba(255, 255, 255, 0.02); position: relative;
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
-        .incident-item:hover, .incident-item.active-item {
-            border-color: var(--accent-secondary); background: rgba(139, 92, 246, 0.06);
-            transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+
+        .panel-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .incident-item.border-status-ACTIVE { border-left: 4px solid var(--accent-primary) !important; }
-        .incident-item.border-status-RESOLVED { border-left: 4px solid var(--success) !important; opacity: 0.88; }
-        .incident-item.border-status-IN_PROGRESS, .incident-item.border-status-ACKNOWLEDGED { border-left: 4px solid var(--warning) !important; }
-        
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; }
-        .status-ACTIVE { background: rgba(244, 63, 94, 0.2); color: #fda4af; }
-        .status-ACKNOWLEDGED { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
-        .status-IN_PROGRESS { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
-        .status-RESOLVED { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
-        .status-ENDED { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+
+        .panel-badge {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        /* --- Toolbar & Filter Controls --- */
+        .incident-toolbar {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 0.85rem;
+            margin-bottom: 1.15rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toolbar-top-row {
+            display: flex;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .search-input-wrapper input {
+            width: 100%;
+            padding: 0.55rem 2.2rem 0.55rem 2.3rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .search-input-wrapper input:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px var(--brand-subtle);
+        }
+
+        .clear-search-btn {
+            position: absolute;
+            right: 0.65rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            line-height: 1;
+        }
+        .clear-search-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-surface-hover);
+        }
+
+        /* Status Dropdown with High Contrast Options */
+        .status-select-wrap {
+            position: relative;
+            min-width: 160px;
+        }
+
+        select {
+            font-family: inherit;
+            background-color: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 0.55rem 2rem 0.55rem 0.85rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+            width: 100%;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238C777A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            transition: all 0.2s ease;
+        }
+        select:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px var(--brand-subtle);
+        }
+        select option {
+            background-color: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+
+        .toolbar-bottom-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+        }
+
+        .status-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .status-pill {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.7rem;
+            border-radius: 16px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.15s ease;
+        }
+        .status-pill:hover {
+            border-color: var(--border-medium);
+            color: var(--text-primary);
+            background: var(--bg-surface-hover);
+        }
+        .status-pill.active {
+            background: var(--brand-primary);
+            border-color: var(--brand-primary);
+            color: #FFFFFF;
+        }
+
+        .pill-count {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.05rem 0.38rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .status-pill.active .pill-count {
+            background: rgba(255, 255, 255, 0.25);
+            color: #FFFFFF;
+        }
+
+        .toolbar-action-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* --- Incident Cards Queue --- */
+        .incident-list {
+            max-height: 580px;
+            overflow-y: auto;
+            padding-right: 0.4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .incident-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .incident-list::-webkit-scrollbar-track {
+            background: var(--bg-surface-elevated);
+            border-radius: 4px;
+        }
+        .incident-list::-webkit-scrollbar-thumb {
+            background: var(--border-medium);
+            border-radius: 4px;
+        }
+
+        .incident-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 1rem 1.15rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            border-left: 4px solid var(--border-medium);
+            min-width: 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .incident-card:hover {
+            border-color: var(--brand-border);
+            background: var(--bg-surface-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-card);
+        }
+        .incident-card.active-card {
+            border-color: var(--brand-primary);
+            background: var(--brand-subtle);
+            box-shadow: 0 0 0 2px var(--brand-border);
+        }
+
+        .incident-card.border-ACTIVE { border-left-color: var(--status-emergency) !important; }
+        .incident-card.border-IN_PROGRESS, .incident-card.border-ACKNOWLEDGED { border-left-color: var(--status-warning) !important; }
+        .incident-card.border-RESOLVED { border-left-color: var(--status-success) !important; opacity: 0.92; }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .incident-type-tag {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .incident-id-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 0.22rem 0.65rem;
+            border-radius: 14px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+        .status-ACTIVE { background: var(--status-emergency-bg); color: var(--status-emergency-text); }
+        .status-IN_PROGRESS, .status-ACKNOWLEDGED { background: var(--status-warning-bg); color: var(--status-warning-text); }
+        .status-RESOLVED, .status-ENDED { background: var(--status-success-bg); color: var(--status-success-text); }
 
         .pulse-indicator {
-            display: inline-block; width: 8px; height: 8px;
-            background-color: var(--accent-primary); border-radius: 50%;
-            margin-right: 6px; animation: activePulse 1.8s infinite;
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background-color: var(--status-emergency);
+            border-radius: 50%;
+            animation: activePulse 1.8s infinite;
         }
         @keyframes activePulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
@@ -125,237 +603,653 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
         }
 
-        .incident-details { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
-        .incident-details div { margin-bottom: 0.25rem; }
-        .action-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
-        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.8rem; background: var(--surface-color); }
-        .btn-small:hover { background: rgba(255, 255, 255, 0.1); }
-        
-        .btn-resolve {
-            background: linear-gradient(135deg, #10b981, #059669); color: #fff;
-            border: none; padding: 0.42rem 0.85rem; border-radius: 6px;
-            font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex;
-            align-items: center; gap: 0.35rem; transition: all 0.2s;
+        .card-details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.25rem;
+            font-size: 0.83rem;
+            color: var(--text-secondary);
         }
-        .btn-resolve:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); }
-        .btn-resolve:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .card-details-grid strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .card-actions-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.45rem;
+            margin-top: 0.4rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+        }
+
+        /* --- Buttons --- */
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .btn-small {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-medium);
+            color: var(--text-primary);
+            padding: 0.38rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .btn-small:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--brand-primary);
+        }
+
+        .btn-resolve {
+            background: var(--status-success);
+            color: #FFFFFF;
+            border: none;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+        }
+        .btn-resolve:hover:not(:disabled) {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
+        }
+        .btn-resolve:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
 
         .btn-resolve-all {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.28));
-            color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4);
-            padding: 0.42rem 0.9rem; border-radius: 6px;
-            font-size: 0.8rem; font-weight: 600; cursor: pointer;
-            display: inline-flex; align-items: center; gap: 0.35rem;
-            transition: all 0.2s ease;
+            background: var(--brand-subtle);
+            color: var(--rose-accent);
+            border: 1px solid var(--brand-border);
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
         }
         .btn-resolve-all:hover:not(:disabled) {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #ffffff; border-color: transparent;
-            transform: translateY(-1px); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+            background: var(--brand-primary);
+            color: #FFFFFF;
+            border-color: var(--brand-primary);
         }
         .btn-resolve-all:disabled {
-            opacity: 0.45; cursor: not-allowed; transform: none;
-            box-shadow: none; border-color: rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.03); color: var(--text-muted);
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: var(--border-subtle);
+            background: var(--bg-surface-elevated);
+            color: var(--text-muted);
         }
 
         .btn-view {
-            background: rgba(139, 92, 246, 0.15); color: #c4b5fd;
-            border: 1px solid rgba(139, 92, 246, 0.3); padding: 0.42rem 0.85rem;
-            border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-            display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s;
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-medium);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
         }
-        .btn-view:hover { background: rgba(139, 92, 246, 0.25); border-color: rgba(139, 92, 246, 0.5); }
-        
-        .filters { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .btn-view:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--brand-primary);
+        }
 
-        .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
-        .btn-tab { background: transparent; border: none; color: var(--text-muted); font-size: 1.1rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s; }
-        .btn-tab.active, .btn-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
-        .users-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        .users-table th, .users-table td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .users-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
-        .users-table tr:hover { background: rgba(255,255,255,0.02); }
-        .users-table tr { cursor: pointer; }
-        
-        .contacts-table, .history-table {
-            width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.85rem;
+        /* --- Situational Map Panel --- */
+        #map {
+            height: 360px;
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-surface-elevated);
+            z-index: 1;
+        }
+
+        .leaflet-tile {
+            filter: var(--map-tile-filter);
+        }
+
+        .map-legend-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-top: 0.85rem;
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .legend-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-medium);
+            border-radius: 10px;
+            box-shadow: var(--shadow-elevated);
+        }
+        .leaflet-popup-tip {
+            background: var(--bg-surface);
+        }
+
+        /* Situational System Notes below map */
+        .system-status-box {
+            margin-top: 1rem;
+            padding: 0.85rem;
+            border-radius: 10px;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-subtle);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .system-status-header {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* --- Empty, Loading & Error States --- */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            background: var(--bg-surface-elevated);
+            border-radius: 10px;
+            border: 1px dashed var(--border-medium);
+        }
+        .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.7;
+        }
+        .empty-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        .empty-desc {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        /* --- Modals --- */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 10, 13, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-medium);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 780px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 1.75rem;
+            box-shadow: var(--shadow-modal);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0.2rem;
+        }
+        .close-btn:hover {
+            color: var(--status-emergency);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 0.85rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .detail-item {
+            background: var(--bg-surface-elevated);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .detail-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.2rem;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .contacts-table, .history-table, .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
         }
         .contacts-table th, .contacts-table td,
-        .history-table th, .history-table td {
-            padding: 0.65rem 0.85rem; text-align: left; border-bottom: 1px solid var(--border-color);
+        .history-table th, .history-table td,
+        .users-table th, .users-table td {
+            padding: 0.65rem 0.85rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
-        .contacts-table th, .history-table th {
-            color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem;
+        .contacts-table th, .history-table th, .users-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            background: var(--bg-surface-elevated);
+        }
+        .users-table tr:hover {
+            background: var(--bg-surface-hover);
+            cursor: pointer;
         }
 
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
-        .modal-content { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 16px; width: 92%; max-width: 840px; max-height: 90vh; overflow-y: auto; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
-        .close-btn { background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; line-height: 1; }
-        .close-btn:hover { color: var(--accent-primary); }
-        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .detail-item { background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); }
-        .detail-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.3rem; }
-        .detail-value { font-weight: 600; font-size: 1.1rem; }
-        .user-incident-history { margin-top: 2rem; }
+        /* --- Auth Section --- */
+        .auth-container {
+            max-width: 420px;
+            margin: 3rem auto;
+        }
+        .auth-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-medium);
+            border-radius: 16px;
+            padding: 2.25rem 2rem;
+            box-shadow: var(--shadow-modal);
+            border-top: 4px solid var(--brand-primary);
+        }
+        .auth-card h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1.25rem;
+            color: var(--text-primary);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .auth-form input {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-medium);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .auth-form input:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px var(--brand-subtle);
+        }
+        .btn-auth-primary {
+            background: var(--brand-primary);
+            color: #FFFFFF;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(120, 13, 43, 0.3);
+        }
+        .btn-auth-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+        .auth-link {
+            color: var(--rose-accent);
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: underline;
+            margin-top: 0.85rem;
+        }
 
+        /* --- Toast Notifications --- */
         .toast {
-            position: fixed; bottom: 2rem; right: 2rem; background: #1e293b;
-            border: 1px solid var(--border-color); color: var(--text-main);
-            padding: 0.85rem 1.4rem; border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 3000;
-            font-size: 0.9rem; font-weight: 500; display: flex; align-items: center;
-            gap: 0.6rem; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-medium);
+            color: var(--text-primary);
+            padding: 0.85rem 1.4rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow-modal);
+            z-index: 3000;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            animation: slideInUp 0.25s ease-out;
         }
-        .toast.toast-success { border-color: var(--success); color: #6ee7b7; }
-        .toast.toast-error { border-color: var(--accent-primary); color: #fda4af; }
+        .toast.toast-success {
+            border-left: 4px solid var(--status-success);
+        }
+        .toast.toast-error {
+            border-left: 4px solid var(--status-emergency);
+        }
+        .toast.toast-info {
+            border-left: 4px solid var(--rose-accent);
+        }
 
-        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
         .hidden { display: none !important; }
-        .error-msg { color: var(--accent-primary); font-size: 0.9rem; margin-bottom: 1rem; text-align: center; }
-        .success-msg { color: var(--success); font-size: 0.9rem; margin-bottom: 1rem; text-align: center; }
-        .auth-link { color: var(--accent-secondary); font-size: 0.9rem; cursor: pointer; text-align: center; text-decoration: underline; margin-top: 1rem; }
-        
-        .leaflet-popup-content-wrapper { background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); }
-        .leaflet-popup-tip { background: var(--bg-color); }
+        .error-msg { color: var(--status-emergency); font-size: 0.85rem; margin-bottom: 0.85rem; text-align: center; font-weight: 500; }
+        .success-msg { color: var(--status-success); font-size: 0.85rem; margin-bottom: 0.85rem; text-align: center; font-weight: 500; }
 
-        @media (max-width: 1024px) {
-            .main-layout { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 768px) {
+        @media (max-width: 1080px) {
+            .operations-layout { grid-template-columns: 1fr; }
             .container { padding: 1rem; }
-            .modal-content { width: 95%; padding: 1.25rem; max-height: 95vh; }
-            .detail-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            header { flex-direction: column; align-items: flex-start; }
+            .header-actions { width: 100%; justify-content: space-between; }
+            .modal-content { padding: 1.25rem; }
+            .stats-overview-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>SafeHer Admin</h1>
-            <div id="loggedInUser" class="hidden" style="display: flex; gap: 1rem; align-items: center;">
-                <span class="status-badge status-RESOLVED" id="userEmailBadge">Admin Connected</span>
-                <button class="btn-small" onclick="logout()">Log Out</button>
+            <div class="brand-cluster">
+                <div class="brand-logo-badge">🛡️</div>
+                <div class="brand-title-wrap">
+                    <h1>
+                        SafeHer Operations
+                        <span class="live-ops-pill"><span class="pulse-indicator"></span>Live CAD</span>
+                    </h1>
+                    <div class="brand-subtitle">Emergency Response & Incident Dispatch Command</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light/Dark Theme">
+                    ☀️ Light Mode
+                </button>
+                <div id="loggedInUser" class="hidden" style="display: flex; gap: 0.65rem; align-items: center;">
+                    <div class="admin-profile-pill">
+                        <span style="color: var(--status-success); font-size: 0.75rem;">●</span>
+                        <span id="userEmailBadge">Admin</span>
+                    </div>
+                    <button class="btn-small" onclick="logout()">Log Out</button>
+                </div>
             </div>
         </header>
 
         <!-- Auth Section -->
-        <div id="authContainer">
-            
+        <div id="authContainer" class="auth-container">
             <!-- Login Form -->
             <div class="auth-card" id="loginForm">
-                <h2 style="margin-bottom: 1rem; text-align: center;">Admin Login</h2>
+                <h2>Admin Command Access</h2>
                 <div id="loginError" class="error-msg"></div>
                 <div class="auth-form">
-                    <input type="text" id="adminIdInput" placeholder="Admin ID" required>
-                    <input type="password" id="passwordInput" placeholder="Password" required>
-                    <button onclick="login()" id="loginBtn">Log In</button>
-                    <div class="auth-link" onclick="showForm('forgotForm')">Forgot Password?</div>
+                    <input type="text" id="adminIdInput" placeholder="Administrator ID" required autocomplete="username">
+                    <input type="password" id="passwordInput" placeholder="Password" required autocomplete="current-password">
+                    <button class="btn-auth-primary" onclick="login()" id="loginBtn">Log In to Console</button>
+                    <div class="auth-link" onclick="showForm('forgotForm')">Forgot Administrative Password?</div>
                 </div>
             </div>
 
             <!-- Forgot Password Form -->
             <div class="auth-card hidden" id="forgotForm">
-                <h2 style="margin-bottom: 1rem; text-align: center;">Reset Password</h2>
+                <h2>Reset Administrative Access</h2>
                 <div id="forgotError" class="error-msg"></div>
                 <div id="forgotSuccess" class="success-msg"></div>
                 <div class="auth-form">
-                    <input type="email" id="recoveryEmailInput" placeholder="Recovery Email" required>
-                    <button onclick="forgotPassword()" id="forgotBtn">Send Reset Link</button>
+                    <input type="email" id="recoveryEmailInput" placeholder="Registered Recovery Email" required>
+                    <button class="btn-auth-primary" onclick="forgotPassword()" id="forgotBtn">Send Reset Link</button>
                     <div class="auth-link" onclick="showForm('loginForm')">Back to Login</div>
                 </div>
             </div>
 
-            <!-- Reset Password Form (Shown only via token) -->
+            <!-- Reset Password Form -->
             <div class="auth-card hidden" id="resetForm">
-                <h2 style="margin-bottom: 1rem; text-align: center;">Set New Password</h2>
+                <h2>Set New Password</h2>
                 <div id="resetError" class="error-msg"></div>
                 <div id="resetSuccess" class="success-msg"></div>
                 <div class="auth-form">
-                    <input type="password" id="newPasswordInput" placeholder="New Password" required>
-                    <button onclick="resetPassword()" id="resetBtn">Update Password</button>
+                    <input type="password" id="newPasswordInput" placeholder="New Password (min 6 chars)" required>
+                    <button class="btn-auth-primary" onclick="resetPassword()" id="resetBtn">Update Password</button>
                     <div class="auth-link" onclick="showForm('loginForm')">Go to Login</div>
                 </div>
             </div>
-
         </div>
 
+        <!-- Dashboard Content -->
         <div id="dashboardContent" class="hidden">
-
             <div class="tabs">
-                <button class="btn-tab active" id="tab-incidents" onclick="switchTab('incidents')">Dashboard & Map</button>
-                <button class="btn-tab" id="tab-users" onclick="switchTab('users')">User Management</button>
+                <button class="btn-tab active" id="tab-incidents" onclick="switchTab('incidents')">
+                    🚨 Emergency Incidents & Live Map
+                </button>
+                <button class="btn-tab" id="tab-users" onclick="switchTab('users')">
+                    👥 User Directory & SOS History
+                </button>
             </div>
-            
+
+            <!-- Incidents View -->
             <div id="view-incidents">
-
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-title">Total Users</div>
-                    <div class="stat-value" id="statUsers">-</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">Active SOS</div>
-                    <div class="stat-value" id="statActive">-</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">Resolved Alerts</div>
-                    <div class="stat-value" id="statResolved">-</div>
-                </div>
-            </div>
-
-            <!-- Incident Management Toolbar -->
-            <div class="panel" style="margin-bottom: 1.5rem; padding: 1rem 1.5rem;">
-                <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; flex: 1; min-width: 280px;">
-                        <div style="position: relative; flex: 1; min-width: 220px; max-width: 400px;">
-                            <input type="text" id="incidentSearchInput" placeholder="Search by ID, User Name, or Email..." oninput="applyFilters()" style="width: 100%; padding-left: 2.2rem;">
-                            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; font-size: 0.85rem;">🔍</span>
+                <!-- Overview Stats Grid -->
+                <div class="stats-overview-grid">
+                    <div class="stat-card" style="border-top-color: var(--brand-primary);">
+                        <div class="stat-card-header">
+                            <span class="stat-title">Total Users</span>
+                            <span class="stat-icon">👥</span>
                         </div>
-                        <select id="statusFilter" onchange="applyFilters()" style="min-width: 160px;">
-                            <option value="ALL">All Statuses</option>
-                            <option value="ACTIVE" selected>Active</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="RESOLVED">Resolved</option>
-                        </select>
+                        <div class="stat-value" id="statUsers">-</div>
+                        <div class="stat-meta">Registered community members</div>
                     </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        <span id="incidentCountBadge" style="font-size: 0.85rem; color: var(--text-muted);">Showing 0 incidents</span>
-                        <button class="btn-resolve-all" id="resolveAllBtn" onclick="openResolveAllModal()" disabled title="No unresolved incidents">
-                            ✓✓ Resolve All (0)
-                        </button>
-                        <button class="btn-small" onclick="fetchIncidents(true)" id="refreshIncidentsBtn">↻ Refresh</button>
+                    <div class="stat-card" style="border-top-color: var(--status-emergency);">
+                        <div class="stat-card-header">
+                            <span class="stat-title">Active SOS</span>
+                            <span class="stat-icon">🚨</span>
+                        </div>
+                        <div class="stat-value" id="statActive" style="color: var(--status-emergency);">-</div>
+                        <div class="stat-meta" id="statActiveMeta">Awaiting emergency response</div>
+                    </div>
+                    <div class="stat-card" style="border-top-color: var(--status-warning);">
+                        <div class="stat-card-header">
+                            <span class="stat-title">In Progress</span>
+                            <span class="stat-icon">⚡</span>
+                        </div>
+                        <div class="stat-value" id="statInProgress" style="color: var(--status-warning);">-</div>
+                        <div class="stat-meta">Under active dispatch</div>
+                    </div>
+                    <div class="stat-card" style="border-top-color: var(--status-success);">
+                        <div class="stat-card-header">
+                            <span class="stat-title">Resolved Incidents</span>
+                            <span class="stat-icon">✓</span>
+                        </div>
+                        <div class="stat-value" id="statResolved" style="color: var(--status-success);">-</div>
+                        <div class="stat-meta">Successfully closed cases</div>
+                    </div>
+                </div>
+
+                <!-- Operations Main Split Layout -->
+                <div class="operations-layout">
+                    <!-- Left: Incident Management Queue -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span>Emergency Incident Queue</span>
+                            </div>
+                            <span class="panel-badge" id="incidentCountBadge">0 incidents</span>
+                        </div>
+
+                        <!-- Incident Toolbar -->
+                        <div class="incident-toolbar">
+                            <div class="toolbar-top-row">
+                                <div class="search-input-wrapper">
+                                    <span class="search-icon">🔍</span>
+                                    <input type="text" id="incidentSearchInput" placeholder="Search ID, Victim Name, Email, Phone, Type..." oninput="handleSearchInput()" autocomplete="off">
+                                    <button type="button" id="clearSearchBtn" class="clear-search-btn hidden" onclick="clearSearch()" title="Clear search">✕</button>
+                                </div>
+                                <div class="status-select-wrap">
+                                    <select id="statusFilter" onchange="handleStatusSelectChange()" title="Filter by incident status">
+                                        <option value="ALL">All Statuses</option>
+                                        <option value="ACTIVE">Active SOS Only</option>
+                                        <option value="IN_PROGRESS">In Progress Only</option>
+                                        <option value="RESOLVED">Resolved Only</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="toolbar-bottom-row">
+                                <div class="status-pills">
+                                    <button class="status-pill active" id="pill-ALL" onclick="setStatusFilter('ALL')">
+                                        All <span class="pill-count" id="count-ALL">0</span>
+                                    </button>
+                                    <button class="status-pill" id="pill-ACTIVE" onclick="setStatusFilter('ACTIVE')">
+                                        <span class="pulse-indicator"></span>Active <span class="pill-count" id="count-ACTIVE">0</span>
+                                    </button>
+                                    <button class="status-pill" id="pill-IN_PROGRESS" onclick="setStatusFilter('IN_PROGRESS')">
+                                        In Progress <span class="pill-count" id="count-IN_PROGRESS">0</span>
+                                    </button>
+                                    <button class="status-pill" id="pill-RESOLVED" onclick="setStatusFilter('RESOLVED')">
+                                        Resolved <span class="pill-count" id="count-RESOLVED">0</span>
+                                    </button>
+                                </div>
+
+                                <div class="toolbar-action-group">
+                                    <button class="btn-resolve-all" id="resolveAllBtn" onclick="openResolveAllModal()" disabled title="No unresolved incidents">
+                                        ✓✓ Resolve All (0)
+                                    </button>
+                                    <button class="btn-small" onclick="fetchIncidents(true)" id="refreshIncidentsBtn">↻ Refresh</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Incident Cards Queue -->
+                        <div class="incident-list" id="incidentList">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Situational Map & Dispatch Hub -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span>Situational GPS Tracking</span>
+                            </div>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <button class="btn-small" onclick="fitAllMarkers()" title="Fit map to all markers">Fit Markers</button>
+                            </div>
+                        </div>
+
+                        <!-- Compact Live Map -->
+                        <div id="map"></div>
+
+                        <!-- Map Legend -->
+                        <div class="map-legend-row">
+                            <div class="legend-item"><span class="legend-dot" style="background: var(--status-emergency);"></span> Active SOS</div>
+                            <div class="legend-item"><span class="legend-dot" style="background: var(--status-warning);"></span> In Progress</div>
+                            <div class="legend-item"><span class="legend-dot" style="background: var(--status-success);"></span> Resolved</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">Real-time GPS fixes</div>
+                        </div>
+
+                        <!-- Situational Quick Notes -->
+                        <div class="system-status-box">
+                            <div class="system-status-header">
+                                <span>🛡️ SafeHer Operations Protocol</span>
+                            </div>
+                            <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-muted);">
+                                Click any incident card on the left or map marker to view victim emergency contacts, GPS accuracy history, and resolution controls.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="main-layout">
-                <div class="panel">
-                    <h2 class="section-title">
-                        <span>Live Incident Map</span>
-                        <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Interactive GPS Tracking</span>
-                    </h2>
-                    <div id="map"></div>
-                </div>
-                
-                <div class="panel">
-                    <h2 class="section-title">
-                        <span>Emergency Response</span>
-                        <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Click card for details</span>
-                    </h2>
-                    <div class="incident-list" id="incidentList">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
-        
-            </div> <!-- end view-incidents -->
-            
+            <!-- Users View -->
             <div id="view-users" class="hidden">
                 <div class="panel">
-                    <h2 class="section-title">User Directory <button class="btn-small" onclick="fetchUsers()">Refresh List</button></h2>
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span>User Directory</span>
+                        </div>
+                        <button class="btn-small" onclick="fetchUsers()">↻ Refresh Users</button>
+                    </div>
                     <div style="overflow-x: auto;">
                         <table class="users-table">
                             <thead>
@@ -374,13 +1268,13 @@
                     </div>
                 </div>
             </div>
-</div>
-        
-        <!-- User Modal -->
+        </div>
+
+        <!-- User Details Modal -->
         <div id="userModal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>User Details</h2>
+                    <h2 style="font-size: 1.25rem;">User Details</h2>
                     <button class="close-btn" onclick="document.getElementById('userModal').classList.add('hidden')">&times;</button>
                 </div>
                 <div id="userDetailsContent">Loading...</div>
@@ -392,8 +1286,8 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div>
-                        <h2 id="incidentModalTitle" style="display: flex; align-items: center; gap: 0.75rem;">Incident Details</h2>
-                        <div id="incidentModalSubtitle" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem;"></div>
+                        <h2 id="incidentModalTitle" style="display: flex; align-items: center; gap: 0.65rem; font-size: 1.25rem;">Incident Details</h2>
+                        <div id="incidentModalSubtitle" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;"></div>
                     </div>
                     <button class="close-btn" onclick="closeIncidentModal()">&times;</button>
                 </div>
@@ -401,21 +1295,23 @@
             </div>
         </div>
 
-        <!-- Resolve Incident Confirmation Modal -->
+        <!-- Single Resolve Confirmation Modal -->
         <div id="resolveConfirmModal" class="modal hidden">
-            <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h2 style="font-size: 1.3rem;">Resolve Incident</h2>
+                    <h2 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <span style="color: var(--status-success);">✓</span> Resolve Incident
+                    </h2>
                     <button class="close-btn" onclick="closeResolveModal()">&times;</button>
                 </div>
                 <div style="margin: 1.25rem 0;">
-                    <p id="resolveConfirmText" style="font-size: 1rem; color: var(--text-main); margin-bottom: 0.75rem;">
+                    <p id="resolveConfirmText" style="font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.75rem; font-weight: 500;">
                         Are you sure you want to mark this incident as RESOLVED?
                     </p>
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
-                        <div>• Resolution timestamp will be permanently recorded.</div>
-                        <div>• Resolving Admin: <strong id="resolveAdminEmail" style="color: var(--text-main);">admin</strong></div>
-                        <div>• Incident status in database will be set to <span class="status-badge status-RESOLVED" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;">RESOLVED</span>.</div>
+                    <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.95rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+                        <div>• Resolution timestamp will be permanently stamped in UTC.</div>
+                        <div>• Resolving Administrator: <strong id="resolveAdminEmail" style="color: var(--text-primary);">admin</strong></div>
+                        <div>• Incident status in database will be set to <span class="status-badge status-RESOLVED" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">RESOLVED</span>.</div>
                     </div>
                 </div>
                 <div id="resolveModalError" class="error-msg" style="text-align: left;"></div>
@@ -432,21 +1328,21 @@
         <div id="resolveAllModal" class="modal hidden">
             <div class="modal-content" style="max-width: 520px;">
                 <div class="modal-header">
-                    <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="color: var(--success);">✓✓</span> Bulk Resolve Incidents
+                    <h2 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--status-success);">✓✓</span> Bulk Resolve Incidents
                     </h2>
                     <button class="close-btn" onclick="closeResolveAllModal()">&times;</button>
                 </div>
                 <div style="margin: 1.25rem 0;">
-                    <p style="font-size: 1rem; color: var(--text-main); margin-bottom: 0.75rem; line-height: 1.5;">
-                        Are you sure you want to mark <strong id="bulkResolveCountText" style="color: var(--accent-primary);">0</strong> unresolved incident(s) as <span class="status-badge status-RESOLVED" style="padding: 0.15rem 0.5rem; font-size: 0.78rem;">RESOLVED</span>?
+                    <p style="font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.75rem; line-height: 1.5;">
+                        Are you sure you want to mark <strong id="bulkResolveCountText" style="color: var(--status-emergency);">0</strong> unresolved incident(s) as <span class="status-badge status-RESOLVED" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;">RESOLVED</span>?
                     </p>
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.95rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
-                        <div>• <strong>Scope:</strong> Resolves <em>ALL</em> currently unresolved incidents in the database, not just those visible under current search filters.</div>
-                        <div>• <strong>Audit Record:</strong> Sets status to RESOLVED, saves resolution timestamp, and logs resolving admin (<strong id="bulkResolveAdminEmail" style="color: var(--text-main);">admin</strong>).</div>
+                    <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.95rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+                        <div>• <strong>Scope:</strong> Resolves <em>ALL</em> currently unresolved incidents in the database, regardless of active filter or search.</div>
+                        <div>• <strong>Audit Record:</strong> Sets status to RESOLVED, saves resolution timestamp, and records admin (<strong id="bulkResolveAdminEmail" style="color: var(--text-primary);">admin</strong>).</div>
                         <div>• <strong>History Safe:</strong> Retains all SOS messages, victim details, and GPS coordinates. Previously resolved incidents are untouched.</div>
-                        <div style="margin-top: 0.5rem; color: #f59e0b; font-size: 0.8rem;">
-                            ⚠️ <em>Note: This action updates system incident records and does not dispatch emergency services or contact emergency contacts.</em>
+                        <div style="margin-top: 0.5rem; color: var(--status-warning); font-size: 0.78rem;">
+                            ⚠️ <em>Note: This action records administrative resolution in the database and does not dispatch responders or contact emergency contacts.</em>
                         </div>
                     </div>
                 </div>
@@ -478,6 +1374,7 @@
 
         // Routing logic based on URL params
         window.onload = () => {
+            initTheme();
             const params = new URLSearchParams(window.location.search);
             const resetToken = params.get('reset_token');
             if (resetToken) {
@@ -491,6 +1388,35 @@
             }
         };
 
+        // --- Theme System ---
+        function initTheme() {
+            const saved = localStorage.getItem('safeher_admin_theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            setTheme(theme);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('safeher_admin_theme', theme);
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                if (theme === 'dark') {
+                    btn.innerHTML = '☀️ Light Mode';
+                    btn.title = 'Switch to light mode';
+                } else {
+                    btn.innerHTML = '🌙 Dark Mode';
+                    btn.title = 'Switch to dark mode';
+                }
+            }
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            setTheme(next);
+        }
+
         function showForm(formId) {
             document.getElementById('loginForm').classList.add('hidden');
             document.getElementById('forgotForm').classList.add('hidden');
@@ -502,15 +1428,20 @@
             document.querySelectorAll('.success-msg').forEach(el => el.innerText = '');
         }
 
+        // --- Auth Operations ---
         async function login() {
             const adminId = document.getElementById('adminIdInput').value.trim();
             const password = document.getElementById('passwordInput').value;
             const btn = document.getElementById('loginBtn');
             const err = document.getElementById('loginError');
             
-            if (!adminId || !password) return err.innerText = "Please enter Admin ID and password.";
+            if (!adminId || !password) {
+                err.innerText = "Please provide both Admin ID and password.";
+                return;
+            }
             
             btn.innerText = "Authenticating...";
+            btn.disabled = true;
             err.innerText = "";
             
             try {
@@ -519,17 +1450,29 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ admin_id: adminId, password: password })
                 });
-                const data = await res.json();
                 
-                if (!res.ok) throw new Error(data.detail || "Login failed");
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || "Authentication failed");
+                }
                 
                 localStorage.setItem('adminToken', data.access_token);
-                await loadDashboard(data.access_token);
+                loadDashboard(data.access_token);
             } catch (error) {
                 err.innerText = error.message;
             } finally {
-                btn.innerText = "Log In";
+                btn.innerText = "Log In to Console";
+                btn.disabled = false;
             }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            currentAdmin = null;
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('loggedInUser').classList.add('hidden');
+            document.getElementById('authContainer').classList.remove('hidden');
+            showForm('loginForm');
         }
 
         async function forgotPassword() {
@@ -538,9 +1481,10 @@
             const err = document.getElementById('forgotError');
             const success = document.getElementById('forgotSuccess');
             
-            if (!email) return err.innerText = "Please enter your recovery email.";
+            if (!email) return err.innerText = "Please provide your recovery email.";
             
-            btn.innerText = "Sending...";
+            btn.innerText = "Sending Link...";
+            btn.disabled = true;
             err.innerText = ""; success.innerText = "";
             
             try {
@@ -551,11 +1495,13 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || "Request failed");
+                
                 success.innerText = data.msg;
             } catch (error) {
                 err.innerText = error.message;
             } finally {
                 btn.innerText = "Send Reset Link";
+                btn.disabled = false;
             }
         }
 
@@ -568,6 +1514,7 @@
             if (!newPassword || newPassword.length < 6) return err.innerText = "Password must be at least 6 characters.";
             
             btn.innerText = "Updating...";
+            btn.disabled = true;
             err.innerText = ""; success.innerText = "";
             
             try {
@@ -579,17 +1526,20 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || "Reset failed");
                 
-                success.innerText = "Password successfully updated! You can now log in.";
+                success.innerText = "Password successfully updated. You can now log in.";
                 document.getElementById('newPasswordInput').value = '';
-                btn.classList.add('hidden'); // hide button after success
+                btn.classList.add('hidden');
             } catch (error) {
                 err.innerText = error.message;
             } finally {
-                if(!btn.classList.contains('hidden')) btn.innerText = "Update Password";
+                if(!btn.classList.contains('hidden')) {
+                    btn.innerText = "Update Password";
+                    btn.disabled = false;
+                }
             }
         }
 
-
+        // --- Tabs Navigation ---
         function switchTab(tab) {
             document.getElementById('view-incidents').classList.add('hidden');
             document.getElementById('view-users').classList.add('hidden');
@@ -601,13 +1551,16 @@
             
             if (tab === 'users') {
                 fetchUsers();
+            } else if (tab === 'incidents') {
+                if (map) setTimeout(() => map.invalidateSize(), 100);
             }
         }
 
+        // --- User Directory Operations ---
         async function fetchUsers() {
             const token = localStorage.getItem('adminToken');
             const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading users...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Loading registered users...</td></tr>';
             try {
                 const res = await fetch(`${API_URL}/admin/users`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -617,7 +1570,7 @@
                 
                 tbody.innerHTML = '';
                 if(users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No users found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">No users registered in the system.</td></tr>';
                     return;
                 }
                 
@@ -627,17 +1580,17 @@
                     const name = user.name || 'N/A';
                     
                     tr.innerHTML = `
-                        <td>${user.id}</td>
-                        <td><strong>${name}</strong><br><span style="font-size:0.8rem;color:var(--text-muted)">${user.phone || 'No phone'}</span></td>
-                        <td>${user.email}</td>
+                        <td style="font-family: 'JetBrains Mono', monospace;">#${user.id}</td>
+                        <td><strong>${escapeHtml(name)}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">${escapeHtml(user.phone || 'No phone')}</span></td>
+                        <td>${escapeHtml(user.email)}</td>
                         <td>${date}</td>
-                        <td><span style="color:var(--accent-primary);font-weight:bold">${user.active_incidents}</span> / ${user.total_incidents}</td>
+                        <td><span style="color:var(--status-emergency);font-weight:bold">${user.active_incidents}</span> / ${user.total_incidents}</td>
                     `;
                     tr.onclick = () => showUserDetails(user.id);
                     tbody.appendChild(tr);
                 });
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--accent-primary)">Error: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--status-emergency)">Error: ${e.message}</td></tr>`;
             }
         }
         
@@ -645,217 +1598,112 @@
             const modal = document.getElementById('userModal');
             const content = document.getElementById('userDetailsContent');
             modal.classList.remove('hidden');
-            content.innerHTML = '<div style="text-align:center;padding:2rem;">Loading details...</div>';
+            content.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">Loading user profile...</div>';
             
             try {
                 const token = localStorage.getItem('adminToken');
                 const res = await fetch(`${API_URL}/admin/users/${userId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!res.ok) throw new Error("Failed to load user details");
+                if(!res.ok) throw new Error("User record not found");
                 const user = await res.json();
                 
-                const createdDate = user.created_at ? new Date(user.created_at).toLocaleString() : 'Unknown';
-                const lastIncident = user.last_incident_date ? new Date(user.last_incident_date).toLocaleString() : 'Never';
-                
-                let incidentsHtml = '<div style="color:var(--text-muted)">No incidents on record.</div>';
-                
-                if (user.incidents && user.incidents.length > 0) {
-                    incidentsHtml = '<div class="incident-list" style="max-height: 400px;">';
-                    user.incidents.forEach(inc => {
-                        const dateStr = new Date(inc.start_time).toLocaleString();
-                        const latestLoc = (inc.locations && inc.locations.length > 0) ? inc.locations[inc.locations.length - 1] : null;
-                        
-                        let locHtml = '<span style="color:#ef4444">No GPS Data</span>';
-                        if (latestLoc) {
-                            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${latestLoc.latitude},${latestLoc.longitude}`;
-                            locHtml = `<a href="${mapsLink}" target="_blank" style="color:var(--accent-secondary)">${latestLoc.latitude.toFixed(5)}, ${latestLoc.longitude.toFixed(5)}</a>`;
-                        }
-                        
-                        incidentsHtml += `
-                            <div class="incident-item">
-                                <div style="display:flex; justify-content:space-between;">
-                                    <strong>${inc.type}</strong>
-                                    <span class="status-badge status-${inc.status}">${inc.status}</span>
-                                </div>
-                                <div class="incident-details" style="margin-top:0.8rem">
-                                    <div><strong>Time:</strong> ${dateStr}</div>
-                                    <div><strong>Location:</strong> ${locHtml}</div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    incidentsHtml += '</div>';
+                let historyHtml = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 0.5rem 0;">No past incidents recorded for this user.</div>';
+                if(user.incidents && user.incidents.length > 0) {
+                    historyHtml = `
+                        <div style="overflow-x: auto;">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${user.incidents.map(inc => `
+                                        <tr>
+                                            <td style="font-family: 'JetBrains Mono', monospace;">#${inc.id}</td>
+                                            <td>${escapeHtml(inc.type)}</td>
+                                            <td><span class="status-badge status-${inc.status}">${inc.status}</span></td>
+                                            <td>${formatDate(inc.start_time)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
                 }
 
                 content.innerHTML = `
                     <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Name</div>
-                            <div class="detail-value">${user.name || 'Not provided'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Email</div>
-                            <div class="detail-value">${user.email}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Phone</div>
-                            <div class="detail-value">${user.phone || 'Not provided'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Blood Group</div>
-                            <div class="detail-value">${user.blood_group || 'Not provided'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Joined</div>
-                            <div class="detail-value">${createdDate}</div>
-                        </div>
+                        <div class="detail-item"><div class="detail-label">User ID</div><div class="detail-value">#${user.id}</div></div>
+                        <div class="detail-item"><div class="detail-label">Full Name</div><div class="detail-value">${escapeHtml(user.name || 'Not provided')}</div></div>
+                        <div class="detail-item"><div class="detail-label">Email Address</div><div class="detail-value">${escapeHtml(user.email)}</div></div>
+                        <div class="detail-item"><div class="detail-label">Phone Number</div><div class="detail-value">${escapeHtml(user.phone || 'Not provided')}</div></div>
+                        <div class="detail-item"><div class="detail-label">Blood Group</div><div class="detail-value">${escapeHtml(user.blood_group || 'Not provided')}</div></div>
+                        <div class="detail-item"><div class="detail-label">Member Since</div><div class="detail-value">${formatDate(user.created_at)}</div></div>
                     </div>
-                    
-                    <h3 style="margin-bottom: 1rem; margin-top: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Incident Summary</h3>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Total SOS</div>
-                            <div class="detail-value">${user.total_incidents}</div>
-                        </div>
-                        <div class="detail-item" style="border-top: 3px solid var(--accent-primary)">
-                            <div class="detail-label">Active SOS</div>
-                            <div class="detail-value">${user.active_incidents}</div>
-                        </div>
-                        <div class="detail-item" style="border-top: 3px solid var(--success)">
-                            <div class="detail-label">Resolved</div>
-                            <div class="detail-value">${user.resolved_incidents}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Last Incident</div>
-                            <div class="detail-value" style="font-size: 0.9rem">${lastIncident}</div>
-                        </div>
-                    </div>
-                    
-                    <h3 style="margin-bottom: 1rem; margin-top: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Incident History</h3>
-                    ${incidentsHtml}
+                    <h3 style="margin-top:1.5rem;margin-bottom:0.6rem;font-size:1rem;color:var(--text-primary);border-bottom:1px solid var(--border-subtle);padding-bottom:0.35rem;">
+                        User Incident History (${user.incidents ? user.incidents.length : 0})
+                    </h3>
+                    ${historyHtml}
                 `;
-            } catch (e) {
-                content.innerHTML = `<div style="color:var(--accent-primary); padding:2rem; text-align:center;">Error: ${e.message}</div>`;
+            } catch(e) {
+                content.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--status-emergency)">Error: ${e.message}</div>`;
             }
         }
 
-        function logout() {
-            localStorage.removeItem('adminToken');
-            document.getElementById('authContainer').classList.remove('hidden');
-            document.getElementById('loggedInUser').classList.add('hidden');
-            document.getElementById('dashboardContent').classList.add('hidden');
-            showForm('loginForm');
-            if (map) { map.remove(); map = null; }
-        }
+        // --- Dashboard Initialization ---
+        async function loadDashboard(token) {
+            document.getElementById('authContainer').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.remove('hidden');
+            document.getElementById('loggedInUser').classList.remove('hidden');
 
-        // --- Helper Formatting & Utility Functions ---
-        function escapeHtml(str) {
-            if (str === null || str === undefined) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return 'Unavailable';
             try {
-                const d = new Date(dateStr);
-                if (isNaN(d.getTime())) return 'Unavailable';
-                return d.toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+                // Fetch authenticated admin details
+                const adminRes = await fetch(`${API_URL}/admin/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-            } catch {
-                return dateStr;
+                if (adminRes.ok) {
+                    currentAdmin = await adminRes.json();
+                    document.getElementById('userEmailBadge').innerText = currentAdmin.email || currentAdmin.admin_id;
+                }
+            } catch (e) {
+                console.warn("Admin profile fetch notice:", e);
             }
+
+            initMap();
+            loadDashboardStats(token);
+            fetchIncidents(false, token);
         }
 
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toastNotification');
-            if (!toast) return;
-            toast.className = `toast toast-${type}`;
-            const icon = type === 'success' ? '✓' : '⚠️';
-            toast.innerHTML = `<span style="font-weight:bold;">${icon}</span> <span>${escapeHtml(message)}</span>`;
-            toast.classList.remove('hidden');
-
-            if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3800);
-        }
-
-        // --- Dashboard Data Loading ---
         async function loadDashboardStats(token = localStorage.getItem('adminToken')) {
             if (!token) return;
             try {
-                const statsResponse = await fetch(`${API_URL}/admin/dashboard`, {
+                const res = await fetch(`${API_URL}/admin/dashboard`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (statsResponse.ok) {
-                    const statsData = await statsResponse.json();
-                    document.getElementById('statUsers').innerText = statsData.total_users;
-                    document.getElementById('statActive').innerText = statsData.active_incidents;
-                    document.getElementById('statResolved').innerText = statsData.resolved_incidents;
-                }
-            } catch (err) {
-                console.warn("Could not refresh dashboard stats", err);
-            }
-        }
+                if (!res.ok) return;
+                const stats = await res.json();
 
-        async function loadDashboard(token) {
-            document.getElementById('authContainer').classList.add('hidden');
-            
-            try {
-                // Fetch admin identity profile
-                try {
-                    const meRes = await fetch(`${API_URL}/admin/me`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (meRes.ok) {
-                        currentAdmin = await meRes.json();
-                        const badgeText = currentAdmin.email ? `Admin: ${currentAdmin.email}` : (currentAdmin.admin_id || 'Admin Connected');
-                        document.getElementById('userEmailBadge').innerText = badgeText;
+                const elUsers = document.getElementById('statUsers');
+                const elActive = document.getElementById('statActive');
+                const elResolved = document.getElementById('statResolved');
+                const elActiveMeta = document.getElementById('statActiveMeta');
+
+                if (elUsers) elUsers.innerText = stats.total_users ?? 0;
+                if (elActive) {
+                    const activeVal = stats.active_incidents ?? 0;
+                    elActive.innerText = activeVal;
+                    if (elActiveMeta) {
+                        elActiveMeta.innerText = activeVal > 0 ? "Immediate attention required" : "No active SOS alerts";
                     }
-                } catch (e) {
-                    console.warn("Admin identity fetch error", e);
                 }
-
-                const statsResponse = await fetch(`${API_URL}/admin/dashboard`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!statsResponse.ok) {
-                    if (statsResponse.status === 401 || statsResponse.status === 403) {
-                        logout();
-                        document.getElementById('loginError').innerText = "Session expired or access denied.";
-                        return;
-                    }
-                    throw new Error("Authentication failed.");
-                }
-
-                const statsData = await statsResponse.json();
-                
-                document.getElementById('loggedInUser').classList.remove('hidden');
-                document.getElementById('dashboardContent').classList.remove('hidden');
-
-                document.getElementById('statUsers').innerText = statsData.total_users;
-                document.getElementById('statActive').innerText = statsData.active_incidents;
-                document.getElementById('statResolved').innerText = statsData.resolved_incidents;
-
-                initMap();
-                await fetchIncidents(false, token);
-
+                if (elResolved) elResolved.innerText = stats.resolved_incidents ?? 0;
             } catch (err) {
-                logout();
-                document.getElementById('loginError').innerText = err.message;
+                console.warn("Stats fetch notice:", err);
             }
         }
 
@@ -871,9 +1719,9 @@
 
             if (allIncidents.length === 0 && list) {
                 list.innerHTML = `
-                    <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
-                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⏳</div>
-                        <div>Loading incidents...</div>
+                    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                        <div style="font-size: 1.6rem; margin-bottom: 0.5rem;">⏳</div>
+                        <div style="font-weight: 500;">Loading incident records...</div>
                     </div>
                 `;
             }
@@ -891,6 +1739,15 @@
                 }
                 
                 allIncidents = await response.json();
+                
+                // Update In-Progress stat card from live incidents
+                const inProgressCount = allIncidents.filter(i => {
+                    const s = (i.status || '').toUpperCase();
+                    return s === 'IN_PROGRESS' || s === 'ACKNOWLEDGED';
+                }).length;
+                const elInProgress = document.getElementById('statInProgress');
+                if (elInProgress) elInProgress.innerText = inProgressCount;
+
                 applyFilters();
                 if (isManual) {
                     showToast("Incidents and map refreshed", "success");
@@ -899,11 +1756,11 @@
                 console.error(err);
                 if (list) {
                     list.innerHTML = `
-                        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--accent-primary);">
-                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚠️</div>
-                            <div style="font-weight: 600;">Failed to Load Incidents</div>
-                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem;">${escapeHtml(err.message)}</div>
-                            <button class="btn-small" onclick="fetchIncidents(true)" style="margin-top: 1rem;">Retry</button>
+                        <div class="empty-state" style="border-color: var(--status-emergency);">
+                            <div class="empty-icon">⚠️</div>
+                            <div class="empty-title">Failed to Load Incidents</div>
+                            <div class="empty-desc">${escapeHtml(err.message)}</div>
+                            <button class="btn-small" onclick="fetchIncidents(true)" style="margin-top: 1rem;">Retry Connection</button>
                         </div>
                     `;
                 }
@@ -915,49 +1772,146 @@
             }
         }
 
-        // --- Map & UI Logic ---
+        // --- Map Initialization ---
         function initMap() {
             if (map) return;
-            map = L.map('map').setView([20.5937, 78.9629], 4);
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView([20.5937, 78.9629], 4);
+
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 maxZoom: 19
             }).addTo(map);
         }
 
+        function fitAllMarkers() {
+            if (!map || markers.length === 0) {
+                if (map) map.setView([20.5937, 78.9629], 4);
+                return;
+            }
+            const bounds = markers.map(m => m.getLatLng());
+            if (bounds.length === 1) {
+                map.setView(bounds[0], 14);
+            } else {
+                map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+            }
+        }
+
+        // --- Filter & Search Engine ---
+        function handleSearchInput() {
+            const val = document.getElementById('incidentSearchInput')?.value || '';
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) {
+                if (val.trim().length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+            applyFilters();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('incidentSearchInput');
+            if (input) input.value = '';
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            applyFilters();
+        }
+
+        function resetAllFilters() {
+            const input = document.getElementById('incidentSearchInput');
+            if (input) input.value = '';
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            setStatusFilter('ALL');
+        }
+
+        function handleStatusSelectChange() {
+            const select = document.getElementById('statusFilter');
+            if (select) {
+                setStatusFilter(select.value);
+            }
+        }
+
+        function setStatusFilter(status) {
+            const select = document.getElementById('statusFilter');
+            if (select) select.value = status;
+            
+            document.querySelectorAll('.status-pill').forEach(pill => pill.classList.remove('active'));
+            const targetPill = document.getElementById(`pill-${status}`);
+            if (targetPill) targetPill.classList.add('active');
+            
+            applyFilters();
+        }
+
         function applyFilters() {
             const statusFilter = document.getElementById('statusFilter')?.value || 'ALL';
-            const searchQuery = (document.getElementById('incidentSearchInput')?.value || '').trim().toLowerCase();
+            const rawSearch = (document.getElementById('incidentSearchInput')?.value || '').trim();
+            const query = rawSearch.toLowerCase();
+            const numQuery = query.replace(/^incident\s*#?/i, '').replace(/^#/, '').trim();
 
+            // Update pill counts from entire dataset
+            const totalCount = allIncidents.length;
+            const activeCount = allIncidents.filter(i => (i.status || '').toUpperCase() === 'ACTIVE').length;
+            const inProgCount = allIncidents.filter(i => {
+                const s = (i.status || '').toUpperCase();
+                return s === 'IN_PROGRESS' || s === 'ACKNOWLEDGED';
+            }).length;
+            const resolvedCount = allIncidents.filter(i => (i.status || '').toUpperCase() === 'RESOLVED').length;
+
+            const cAll = document.getElementById('count-ALL'); if (cAll) cAll.innerText = totalCount;
+            const cAct = document.getElementById('count-ACTIVE'); if (cAct) cAct.innerText = activeCount;
+            const cInp = document.getElementById('count-IN_PROGRESS'); if (cInp) cInp.innerText = inProgCount;
+            const cRes = document.getElementById('count-RESOLVED'); if (cRes) cRes.innerText = resolvedCount;
+
+            // 1. Status Filter
             let filtered = allIncidents;
-
-            // Status filter using backend supported values
             if (statusFilter === 'ACTIVE') {
-                filtered = filtered.filter(inc => (inc.status || '').toUpperCase() === 'ACTIVE');
+                filtered = filtered.filter(i => (i.status || '').toUpperCase() === 'ACTIVE');
             } else if (statusFilter === 'IN_PROGRESS') {
-                filtered = filtered.filter(inc => {
-                    const st = (inc.status || '').toUpperCase();
-                    return st === 'IN_PROGRESS' || st === 'ACKNOWLEDGED';
+                filtered = filtered.filter(i => {
+                    const s = (i.status || '').toUpperCase();
+                    return s === 'IN_PROGRESS' || s === 'ACKNOWLEDGED';
                 });
             } else if (statusFilter === 'RESOLVED') {
-                filtered = filtered.filter(inc => (inc.status || '').toUpperCase() === 'RESOLVED');
+                filtered = filtered.filter(i => (i.status || '').toUpperCase() === 'RESOLVED');
             }
 
-            // Search filter by incident ID, user name, email, or emergency type
-            if (searchQuery) {
+            // 2. Search Filter
+            if (query) {
                 filtered = filtered.filter(inc => {
-                    const idMatch = String(inc.id).includes(searchQuery);
-                    const nameMatch = (inc.user?.name || '').toLowerCase().includes(searchQuery);
-                    const emailMatch = (inc.user?.email || '').toLowerCase().includes(searchQuery);
-                    const phoneMatch = (inc.user?.phone || '').toLowerCase().includes(searchQuery);
-                    const typeMatch = (inc.type || '').toLowerCase().includes(searchQuery);
-                    return idMatch || nameMatch || emailMatch || phoneMatch || typeMatch;
+                    const idStr = String(inc.id);
+                    const idMatch = idStr.includes(query) || (numQuery && idStr.includes(numQuery));
+                    const nameMatch = (inc.user?.name || '').toLowerCase().includes(query);
+                    const emailMatch = (inc.user?.email || '').toLowerCase().includes(query);
+                    const phoneMatch = (inc.user?.phone || '').toLowerCase().includes(query);
+                    const typeMatch = (inc.type || '').toLowerCase().includes(query);
+                    const descMatch = (inc.description || '').toLowerCase().includes(query);
+                    const resolvedMatch = (inc.resolved_by || '').toLowerCase().includes(query);
+                    
+                    let locMatch = false;
+                    if (inc.locations && inc.locations.length > 0) {
+                        const loc = inc.locations[inc.locations.length - 1];
+                        locMatch = String(loc.latitude).includes(query) || String(loc.longitude).includes(query);
+                    }
+
+                    return idMatch || nameMatch || emailMatch || phoneMatch || typeMatch || descMatch || resolvedMatch || locMatch;
                 });
             }
 
             const countBadge = document.getElementById('incidentCountBadge');
             if (countBadge) {
-                countBadge.innerText = `Showing ${filtered.length} of ${allIncidents.length} incidents`;
+                if (query || statusFilter !== 'ALL') {
+                    countBadge.innerText = `Showing ${filtered.length} of ${allIncidents.length} incidents`;
+                } else {
+                    countBadge.innerText = `${allIncidents.length} total incidents`;
+                }
             }
 
             renderMapMarkers(filtered);
@@ -986,145 +1940,141 @@
                 bounds.push([lat, lng]);
 
                 const color = getMarkerColor(inc.status);
-                const markerHtml = `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 12px ${color};"></div>`;
-                const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
+                const markerHtml = `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff; box-shadow: 0 0 10px ${color}; cursor: pointer;"></div>`;
+                const icon = L.divIcon({ html: markerHtml, className: 'custom-leaflet-marker', iconSize: [14, 14], iconAnchor: [7, 7] });
 
                 const dateStr = formatDate(inc.start_time);
-                const userName = inc.user?.name || inc.user?.email || `User ${inc.user_id}`;
-                const phone = inc.user?.phone || 'Not provided';
+                const userName = inc.user?.name || inc.user?.email || `User #${inc.user_id}`;
                 const isResolved = (inc.status || '').toUpperCase() === 'RESOLVED';
 
                 let resolveBtnHtml = '';
                 if (!isResolved) {
-                    resolveBtnHtml = `<button class="btn-resolve" style="width: 100%; margin-top: 0.35rem; justify-content: center; font-size: 0.75rem;" onclick="openResolveConfirmModal(${inc.id});">✓ Resolve Incident</button>`;
+                    resolveBtnHtml = `<button class="btn-resolve" style="width: 100%; margin-top: 0.5rem; justify-content: center; font-size: 0.75rem;" onclick="openResolveConfirmModal(${inc.id});">✓ Resolve Incident</button>`;
                 }
 
                 const popupContent = `
-                    <div style="padding: 6px; min-width: 180px;">
+                    <div style="padding: 4px; min-width: 190px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <strong style="font-size: 1.05em; color: var(--text-main);">${escapeHtml(inc.type)}</strong>
-                            <span class="status-badge status-${inc.status}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">${inc.status}</span>
+                            <strong style="font-size: 0.95rem; color: var(--text-primary);">${escapeHtml(inc.type)}</strong>
+                            <span class="status-badge status-${(inc.status || '').toUpperCase()}" style="font-size: 0.68rem; padding: 0.12rem 0.45rem;">${escapeHtml(inc.status || 'UNKNOWN')}</span>
                         </div>
-                        <hr style="border-color: rgba(255,255,255,0.1); margin: 6px 0;">
-                        <div style="font-size: 0.82rem; line-height: 1.4; color: var(--text-muted);">
-                            <div><strong>Incident:</strong> #${inc.id}</div>
-                            <div><strong>User:</strong> ${escapeHtml(userName)}</div>
-                            <div><strong>Phone:</strong> ${escapeHtml(phone)}</div>
-                            <div><strong>Time:</strong> ${dateStr}</div>
-                            <div><strong>Accuracy:</strong> &plusmn;${latestLoc.accuracy || 'N/A'}m</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 4px;">
+                            <div><strong>Incident #${inc.id}</strong></div>
+                            <div>${escapeHtml(userName)}</div>
+                            <div>${dateStr}</div>
                         </div>
-                        <div style="margin-top: 8px;">
-                            <button class="btn-view" style="width: 100%; justify-content: center; font-size: 0.75rem;" onclick="openIncidentDetailModal(${inc.id});">View Full Details</button>
-                            ${resolveBtnHtml}
+                        <div style="display: flex; gap: 0.35rem; margin-top: 0.5rem;">
+                            <button class="btn-view" style="flex: 1; justify-content: center; font-size: 0.75rem; padding: 0.3rem 0.5rem;" onclick="openIncidentDetailModal(${inc.id});">View Details</button>
                         </div>
+                        ${resolveBtnHtml}
                     </div>
                 `;
 
-                const marker = L.marker([lat, lng], { icon }).bindPopup(popupContent).addTo(map);
-                marker.on('click', () => {
-                    document.querySelectorAll('.incident-item').forEach(el => el.classList.remove('active-item'));
-                    const listEl = document.getElementById(`inc-item-${inc.id}`);
-                    if (listEl) {
-                        listEl.classList.add('active-item');
-                        listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                });
+                const marker = L.marker([lat, lng], { icon }).addTo(map);
+                marker.bindPopup(popupContent);
+                marker.incidentId = inc.id;
                 markers.push(marker);
             });
 
-            if (bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+            if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+            } else if (bounds.length === 1) {
+                map.setView(bounds[0], 14);
             }
         }
 
         function renderIncidentList(incidents) {
             const list = document.getElementById('incidentList');
             if (!list) return;
-            list.innerHTML = '';
 
             if (incidents.length === 0) {
+                const hasSearch = Boolean((document.getElementById('incidentSearchInput')?.value || '').trim());
+                const hasFilter = (document.getElementById('statusFilter')?.value || 'ALL') !== 'ALL';
                 list.innerHTML = `
-                    <div style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
-                        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🛡️</div>
-                        <div style="font-weight: 600; color: var(--text-main); font-size: 1.05rem;">No Incidents Match Filters</div>
-                        <div style="font-size: 0.85rem; margin-top: 0.35rem;">Try adjusting the status filter or clearing your search term.</div>
+                    <div class="empty-state">
+                        <div class="empty-icon">🛡️</div>
+                        <div class="empty-title">${hasSearch || hasFilter ? 'No Matching Incidents Found' : 'No Emergency Incidents'}</div>
+                        <div class="empty-desc">${hasSearch || hasFilter ? 'No incidents match the active search query or status filter.' : 'All clear. There are currently no emergency incidents in the system.'}</div>
+                        ${hasSearch || hasFilter ? '<button class="btn-small" onclick="resetAllFilters()" style="margin-top: 1rem;">Reset Search & Filters</button>' : ''}
                     </div>
                 `;
                 return;
             }
 
+            list.innerHTML = '';
             incidents.forEach(inc => {
-                const latestLoc = (inc.locations && inc.locations.length > 0) ? inc.locations[inc.locations.length - 1] : null;
-                const dateStr = formatDate(inc.start_time);
-                const userName = inc.user?.name || inc.user?.email || `User ${inc.user_id}`;
-                const isResolved = (inc.status || '').toUpperCase() === 'RESOLVED';
-                const statusClass = (inc.status || '').toUpperCase();
-
                 const div = document.createElement('div');
-                div.className = `incident-item border-status-${statusClass}`;
-                div.id = `inc-item-${inc.id}`;
-                
-                let locText = '<span style="color: #ef4444;">No GPS Data</span>';
-                if (latestLoc) {
-                    const staleMsg = (new Date() - new Date(latestLoc.timestamp)) > 3600000 ? ' (Stale)' : '';
-                    locText = `${latestLoc.latitude.toFixed(5)}, ${latestLoc.longitude.toFixed(5)} &plusmn;${latestLoc.accuracy || 0}m${staleMsg}`;
+                const statusUpper = (inc.status || '').toUpperCase();
+                div.className = `incident-card border-${statusUpper}`;
+                div.id = `inc-card-${inc.id}`;
+
+                const dateStr = formatDate(inc.start_time);
+                const userName = inc.user?.name || inc.user?.email || `User #${inc.user_id}`;
+                const userPhone = inc.user?.phone ? `<a href="tel:${escapeHtml(inc.user.phone)}" style="color:var(--rose-accent); text-decoration:none;" onclick="event.stopPropagation();">${escapeHtml(inc.user.phone)}</a>` : 'No phone';
+
+                const isResolved = statusUpper === 'RESOLVED';
+                const latestLoc = (inc.locations && inc.locations.length > 0) ? inc.locations[inc.locations.length - 1] : null;
+                const locText = latestLoc 
+                    ? `<span style="font-family:'JetBrains Mono',monospace;">${latestLoc.latitude.toFixed(5)}, ${latestLoc.longitude.toFixed(5)}</span> (&plusmn;${latestLoc.accuracy || 'N/A'}m)` 
+                    : '<span style="color:var(--status-emergency);">No GPS fix</span>';
+
+                let badgeHtml = '';
+                if (statusUpper === 'ACTIVE') {
+                    badgeHtml = `<span class="status-badge status-ACTIVE"><span class="pulse-indicator"></span>ACTIVE</span>`;
+                } else if (statusUpper === 'IN_PROGRESS' || statusUpper === 'ACKNOWLEDGED') {
+                    badgeHtml = `<span class="status-badge status-IN_PROGRESS">IN PROGRESS</span>`;
+                } else if (isResolved) {
+                    badgeHtml = `<span class="status-badge status-RESOLVED">✓ RESOLVED</span>`;
+                } else {
+                    badgeHtml = `<span class="status-badge">${statusUpper}</span>`;
                 }
 
                 let resolutionHtml = '';
                 if (isResolved) {
-                    const resTime = formatDate(inc.end_time);
-                    const adminBy = inc.resolved_by ? ` (by ${escapeHtml(inc.resolved_by)})` : '';
-                    resolutionHtml = `<div><strong>Resolved:</strong> <span style="color: #6ee7b7;">${resTime}</span>${adminBy}</div>`;
+                    const resolvedDate = inc.end_time ? formatDate(inc.end_time) : 'Recorded';
+                    const adminBy = inc.resolved_by ? ` by ${escapeHtml(inc.resolved_by)}` : '';
+                    resolutionHtml = `<div style="font-size:0.75rem; color:var(--status-success); margin-top:2px;">✓ Resolved at ${resolvedDate}${adminBy}</div>`;
                 }
 
-                // Status badge with pulse for active
-                let badgeHtml = '';
-                if (statusClass === 'ACTIVE') {
-                    badgeHtml = `<span class="status-badge status-ACTIVE"><span class="pulse-indicator"></span>ACTIVE</span>`;
-                } else if (statusClass === 'RESOLVED') {
-                    badgeHtml = `<span class="status-badge status-RESOLVED">✓ RESOLVED</span>`;
-                } else {
-                    badgeHtml = `<span class="status-badge status-${statusClass}">${statusClass}</span>`;
-                }
-
-                // Action buttons on card
                 let actionButtons = `
-                    <div class="action-buttons">
-                        ${!isResolved ? `<button class="btn-resolve" onclick="openResolveConfirmModal(${inc.id}); event.stopPropagation();">✓ Resolve</button>` : ''}
-                        <button class="btn-view" onclick="openIncidentDetailModal(${inc.id}); event.stopPropagation();">Details</button>
+                    <div class="card-actions-row">
+                        <button class="btn-view" onclick="event.stopPropagation(); openIncidentDetailModal(${inc.id});">
+                            View Record
+                        </button>
                 `;
 
-                if (latestLoc) {
-                    const mapsLink = `https://www.google.com/maps/search/?api=1&query=${latestLoc.latitude},${latestLoc.longitude}`;
-                    const summary = `SOS ALERT: ${userName}. Status: ${inc.status}. Location: ${mapsLink} Time: ${dateStr}`;
+                if (!isResolved) {
                     actionButtons += `
-                        <button class="btn-small" onclick="window.open('${mapsLink}', '_blank'); event.stopPropagation();">Maps</button>
-                        <button class="btn-small" onclick="navigator.clipboard.writeText('${summary}'); showToast('Summary copied to clipboard'); event.stopPropagation();">Copy</button>
+                        <button class="btn-resolve" onclick="event.stopPropagation(); openResolveConfirmModal(${inc.id});">
+                            ✓ Resolve
+                        </button>
                     `;
                 }
+
                 actionButtons += `</div>`;
 
                 div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.5rem;">
+                    <div class="card-header-row">
                         <div>
-                            <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-main);">${escapeHtml(inc.type)}</div>
-                            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Incident #${inc.id}</div>
+                            <div class="incident-type-tag">
+                                <span>${escapeHtml(inc.type)}</span>
+                            </div>
+                            <div class="incident-id-tag">Incident #${inc.id}</div>
                         </div>
                         ${badgeHtml}
                     </div>
-                    <div class="incident-details" style="margin-top: 0.6rem;">
-                        <div><strong>User:</strong> ${escapeHtml(userName)} (${escapeHtml(inc.user?.phone || 'No phone')})</div>
+                    <div class="card-details-grid">
+                        <div><strong>Victim:</strong> ${escapeHtml(userName)} &bull; ${userPhone}</div>
                         <div><strong>Started:</strong> ${dateStr}</div>
-                        <div><strong>Location:</strong> ${locText}</div>
+                        <div><strong>Coordinates:</strong> ${locText}</div>
                         ${resolutionHtml}
                     </div>
                     ${actionButtons}
                 `;
-                
-                // Clicking anywhere on card opens the incident details
+
                 div.onclick = () => {
-                    document.querySelectorAll('.incident-item').forEach(el => el.classList.remove('active-item'));
-                    div.classList.add('active-item');
+                    document.querySelectorAll('.incident-card').forEach(el => el.classList.remove('active-card'));
+                    div.classList.add('active-card');
                     openIncidentDetailModal(inc.id);
                 };
 
@@ -1143,7 +2093,7 @@
             modal.classList.remove('hidden');
 
             title.innerHTML = `Incident #${incidentId}`;
-            subtitle.innerText = "Loading incident details...";
+            subtitle.innerText = "Loading complete operational details...";
             content.innerHTML = `
                 <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
                     <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">⏳</div>
@@ -1155,7 +2105,6 @@
                 const token = localStorage.getItem('adminToken');
                 let inc = null;
                 
-                // Fetch fresh from backend endpoint
                 const res = await fetch(`${API_URL}/admin/incidents/${incidentId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -1163,7 +2112,6 @@
                 if (res.ok) {
                     inc = await res.json();
                 } else {
-                    // Fallback to cache
                     inc = allIncidents.find(i => i.id === incidentId);
                     if (!inc) throw new Error("Incident not found");
                 }
@@ -1172,9 +2120,10 @@
 
             } catch (err) {
                 content.innerHTML = `
-                    <div style="text-align: center; padding: 2rem 1rem; color: var(--accent-primary);">
-                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚠️</div>
-                        <div>${escapeHtml(err.message)}</div>
+                    <div class="empty-state" style="border-color: var(--status-emergency);">
+                        <div class="empty-icon">⚠️</div>
+                        <div class="empty-title">Error Loading Incident</div>
+                        <div class="empty-desc">${escapeHtml(err.message)}</div>
                         <button class="btn-small" onclick="closeIncidentModal()" style="margin-top: 1rem;">Close</button>
                     </div>
                 `;
@@ -1198,43 +2147,38 @@
             `;
             subtitle.innerText = `Recorded at ${formatDate(inc.start_time)}`;
 
-            // 1. Incident Metrics
             const startTimeStr = formatDate(inc.start_time);
-            const endTimeStr = inc.end_time ? formatDate(inc.end_time) : '<span style="color:#fda4af;">Active / Unresolved</span>';
+            const endTimeStr = inc.end_time ? formatDate(inc.end_time) : '<span style="color:var(--status-emergency);">Active / Unresolved</span>';
             const lastUpdatedStr = latestLoc ? formatDate(latestLoc.timestamp) : startTimeStr;
             const resolvedByStr = inc.resolved_by ? escapeHtml(inc.resolved_by) : (isResolved ? 'Administrator' : 'Not resolved');
 
-            // 2. User info
             const user = inc.user || {};
             const userName = user.name || 'Not provided';
             const userEmail = user.email || 'Not provided';
-            const userPhone = user.phone ? `<a href="tel:${escapeHtml(user.phone)}" style="color:var(--accent-secondary); text-decoration:none;">${escapeHtml(user.phone)}</a>` : 'Not provided';
+            const userPhone = user.phone ? `<a href="tel:${escapeHtml(user.phone)}" style="color:var(--rose-accent); text-decoration:none;">${escapeHtml(user.phone)}</a>` : 'Not provided';
             const userBlood = user.blood_group || 'Not provided';
-            const userJoined = user.created_at ? formatDate(user.created_at) : 'Not provided';
 
-            // 3. Location info
-            let locSnippet = '<div style="color: #ef4444;">No GPS coordinates recorded</div>';
+            let locSnippet = '<div style="color: var(--status-emergency);">No GPS tracking fixes recorded for this incident.</div>';
             let mapLinks = '';
             if (latestLoc) {
                 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${latestLoc.latitude},${latestLoc.longitude}`;
                 locSnippet = `
-                    <div style="font-family: monospace; font-size: 0.95rem; color: var(--text-main);">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; color: var(--text-primary);">
                         ${latestLoc.latitude.toFixed(6)}, ${latestLoc.longitude.toFixed(6)}
                     </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
-                        Accuracy: &plusmn;${latestLoc.accuracy || 'N/A'}m &bull; Time: ${formatDate(latestLoc.timestamp)}
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        Accuracy: &plusmn;${latestLoc.accuracy || 'N/A'}m &bull; Fix Time: ${formatDate(latestLoc.timestamp)}
                     </div>
                 `;
                 mapLinks = `
-                    <div style="margin-top: 0.6rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="margin-top: 0.65rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button class="btn-small" onclick="window.open('${mapsUrl}', '_blank');">🗺️ Open in Google Maps</button>
                         <button class="btn-small" onclick="focusIncidentOnMap(${inc.id}); closeIncidentModal();">📍 Center on Live Map</button>
                     </div>
                 `;
             }
 
-            // 4. Emergency Contacts table
-            let contactsHtml = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">No emergency contacts registered by user.</div>';
+            let contactsHtml = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 0.5rem 0;">No emergency contacts registered by user.</div>';
             if (user.contacts && user.contacts.length > 0) {
                 contactsHtml = `
                     <div style="overflow-x: auto;">
@@ -1252,8 +2196,8 @@
                                     <tr>
                                         <td><strong>${escapeHtml(c.name)}</strong></td>
                                         <td>${escapeHtml(c.relation || 'Not specified')}</td>
-                                        <td><a href="tel:${escapeHtml(c.phone)}" style="color: var(--accent-secondary); text-decoration: none;">${escapeHtml(c.phone)}</a></td>
-                                        <td>${c.is_primary ? '<span class="status-badge status-RESOLVED" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">PRIMARY</span>' : '<span style="color:var(--text-muted); font-size:0.75rem;">Secondary</span>'}</td>
+                                        <td><a href="tel:${escapeHtml(c.phone)}" style="color: var(--rose-accent); text-decoration: none;">${escapeHtml(c.phone)}</a></td>
+                                        <td>${c.is_primary ? '<span class="status-badge status-RESOLVED" style="font-size: 0.7rem; padding: 0.12rem 0.45rem;">PRIMARY</span>' : '<span style="color:var(--text-muted); font-size:0.75rem;">Secondary</span>'}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1262,11 +2206,10 @@
                 `;
             }
 
-            // 5. GPS Breadcrumb Trail (Location History)
-            let breadcrumbsHtml = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">No GPS tracking points recorded.</div>';
+            let breadcrumbsHtml = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 0.5rem 0;">No GPS tracking trail points available.</div>';
             if (inc.locations && inc.locations.length > 0) {
                 breadcrumbsHtml = `
-                    <div style="overflow-x: auto; max-height: 200px; overflow-y: auto;">
+                    <div style="overflow-x: auto; max-height: 180px; overflow-y: auto;">
                         <table class="history-table">
                             <thead>
                                 <tr>
@@ -1281,7 +2224,7 @@
                                     <tr>
                                         <td>${idx + 1}</td>
                                         <td>${formatDate(loc.timestamp)}</td>
-                                        <td style="font-family: monospace;">${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}</td>
+                                        <td style="font-family: 'JetBrains Mono', monospace;">${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}</td>
                                         <td>&plusmn;${loc.accuracy || 'N/A'}m</td>
                                     </tr>
                                 `).join('')}
@@ -1291,94 +2234,57 @@
                 `;
             }
 
-            // 6. Action footer
             let footerActions = '';
             if (!isResolved) {
                 footerActions = `
-                    <button class="btn-resolve" onclick="openResolveConfirmModal(${inc.id});" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">
+                    <button class="btn-resolve" onclick="openResolveConfirmModal(${inc.id});" style="padding: 0.55rem 1.25rem;">
                         ✓ Resolve Incident
                     </button>
                 `;
             } else {
                 footerActions = `
-                    <div style="color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem;">
+                    <div style="color: var(--status-success); font-weight: 600; display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem;">
                         ✓ Incident Successfully Resolved
                     </div>
                 `;
             }
 
             content.innerHTML = `
-                <h3 style="margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; font-size: 1.05rem;">Incident Information</h3>
+                <h3 style="margin-bottom: 0.65rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.35rem; font-size: 0.95rem; color: var(--text-primary);">Incident Operational Metrics</h3>
                 <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Incident ID</div>
-                        <div class="detail-value">#${inc.id}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Emergency Type</div>
-                        <div class="detail-value">${escapeHtml(inc.type)}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Current Status</div>
-                        <div class="detail-value"><span class="status-badge status-${statusClass}">${statusClass}</span></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Report Description</div>
-                        <div class="detail-value" style="font-size: 0.95rem;">${escapeHtml(inc.description || 'Not provided')}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Created At</div>
-                        <div class="detail-value" style="font-size: 0.9rem;">${startTimeStr}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Last Location Update</div>
-                        <div class="detail-value" style="font-size: 0.9rem;">${lastUpdatedStr}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Resolution Timestamp</div>
-                        <div class="detail-value" style="font-size: 0.9rem;">${endTimeStr}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Resolved By Admin</div>
-                        <div class="detail-value" style="font-size: 0.9rem;">${resolvedByStr}</div>
-                    </div>
+                    <div class="detail-item"><div class="detail-label">Incident ID</div><div class="detail-value">#${inc.id}</div></div>
+                    <div class="detail-item"><div class="detail-label">Emergency Type</div><div class="detail-value">${escapeHtml(inc.type)}</div></div>
+                    <div class="detail-item"><div class="detail-label">Current Status</div><div class="detail-value"><span class="status-badge status-${statusClass}">${statusClass}</span></div></div>
+                    <div class="detail-item"><div class="detail-label">Report Description</div><div class="detail-value" style="font-size:0.85rem;">${escapeHtml(inc.description || 'Not provided')}</div></div>
+                    <div class="detail-item"><div class="detail-label">Created At</div><div class="detail-value" style="font-size:0.85rem;">${startTimeStr}</div></div>
+                    <div class="detail-item"><div class="detail-label">Last Location Fix</div><div class="detail-value" style="font-size:0.85rem;">${lastUpdatedStr}</div></div>
+                    <div class="detail-item"><div class="detail-label">Resolution Timestamp</div><div class="detail-value" style="font-size:0.85rem;">${endTimeStr}</div></div>
+                    <div class="detail-item"><div class="detail-label">Resolved By Admin</div><div class="detail-value" style="font-size:0.85rem;">${resolvedByStr}</div></div>
                 </div>
 
-                <h3 style="margin-bottom: 0.75rem; margin-top: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; font-size: 1.05rem;">Victim / Registered User</h3>
+                <h3 style="margin-bottom: 0.65rem; margin-top: 1.25rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.35rem; font-size: 0.95rem; color: var(--text-primary);">Victim / Registered Profile</h3>
                 <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Name</div>
-                        <div class="detail-value">${escapeHtml(userName)}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Email</div>
-                        <div class="detail-value" style="font-size: 0.95rem;">${escapeHtml(userEmail)}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Phone Number</div>
-                        <div class="detail-value">${userPhone}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Blood Group</div>
-                        <div class="detail-value">${escapeHtml(userBlood)}</div>
-                    </div>
+                    <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${escapeHtml(userName)}</div></div>
+                    <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value" style="font-size:0.85rem;">${escapeHtml(userEmail)}</div></div>
+                    <div class="detail-item"><div class="detail-label">Phone</div><div class="detail-value">${userPhone}</div></div>
+                    <div class="detail-item"><div class="detail-label">Blood Group</div><div class="detail-value">${escapeHtml(userBlood)}</div></div>
                 </div>
 
-                <h3 style="margin-bottom: 0.75rem; margin-top: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; font-size: 1.05rem;">Location & GPS Coordinates</h3>
-                <div style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+                <h3 style="margin-bottom: 0.65rem; margin-top: 1.25rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.35rem; font-size: 0.95rem; color: var(--text-primary);">Location & GPS Coordinates</h3>
+                <div style="background: var(--bg-surface-elevated); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-subtle); margin-bottom: 1.25rem;">
                     ${locSnippet}
                     ${mapLinks}
                 </div>
 
-                <h3 style="margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; font-size: 1.05rem;">Emergency Contacts</h3>
+                <h3 style="margin-bottom: 0.65rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.35rem; font-size: 0.95rem; color: var(--text-primary);">Emergency Contacts</h3>
                 ${contactsHtml}
 
-                <h3 style="margin-bottom: 0.75rem; margin-top: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; font-size: 1.05rem;">GPS Tracking History (${inc.locations ? inc.locations.length : 0} fixes)</h3>
+                <h3 style="margin-bottom: 0.65rem; margin-top: 1.25rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.35rem; font-size: 0.95rem; color: var(--text-primary);">GPS Breadcrumb History (${inc.locations ? inc.locations.length : 0} fixes)</h3>
                 ${breadcrumbsHtml}
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 0.85rem;">
                     <div>${footerActions}</div>
-                    <button class="btn-small" onclick="closeIncidentModal()" style="padding: 0.6rem 1.25rem;">Close</button>
+                    <button class="btn-small" onclick="closeIncidentModal()" style="padding: 0.55rem 1.25rem;">Close</button>
                 </div>
             `;
         }
@@ -1388,7 +2294,7 @@
             activeModalIncidentId = null;
         }
 
-        // --- Resolve Incident Confirmation Modal Logic ---
+        // --- Single Resolve Modal Logic ---
         function openResolveConfirmModal(incidentId) {
             pendingResolveIncidentId = incidentId;
             const modal = document.getElementById('resolveConfirmModal');
@@ -1435,27 +2341,18 @@
                     throw new Error(data.detail || "Failed to resolve incident");
                 }
 
-                // Database update verified by backend response
                 const resolvedId = pendingResolveIncidentId;
                 closeResolveModal();
                 showToast(`Incident #${resolvedId} successfully resolved!`, 'success');
 
-                // Update in-memory cached incidents
                 const idx = allIncidents.findIndex(i => i.id === resolvedId);
                 if (idx !== -1) {
                     allIncidents[idx] = data;
                 }
 
-                // Immediately refresh dashboard stats from backend
                 loadDashboardStats(token);
-
-                // Update UI list and map with the latest status
                 applyFilters();
 
-                // Update Resolve All button count and state
-                updateResolveAllButtonState();
-
-                // If incident detail modal is currently open for this incident, update it in place
                 if (activeModalIncidentId === resolvedId) {
                     renderIncidentDetailContent(data);
                 }
@@ -1539,13 +2436,9 @@
                 closeResolveAllModal();
                 showToast(`Bulk resolution complete: ${data.resolved_count} incident(s) resolved!`, 'success');
 
-                // Immediately refresh all incidents from backend
                 await fetchIncidents(false, token);
-
-                // Immediately refresh dashboard stats from backend
                 await loadDashboardStats(token);
 
-                // If incident detail modal is currently open, refresh its content
                 if (activeModalIncidentId) {
                     const updated = allIncidents.find(i => i.id === activeModalIncidentId);
                     if (updated) {
@@ -1577,13 +2470,52 @@
                     }
                 });
             }
-            // Highlight in list
-            document.querySelectorAll('.incident-item').forEach(el => el.classList.remove('active-item'));
-            const listEl = document.getElementById(`inc-item-${incidentId}`);
+            document.querySelectorAll('.incident-card').forEach(el => el.classList.remove('active-card'));
+            const listEl = document.getElementById(`inc-card-${incidentId}`);
             if (listEl) {
-                listEl.classList.add('active-item');
+                listEl.classList.add('active-card');
                 listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+        }
+
+        // --- Helper Functions ---
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            if (!toast) return;
+            
+            toast.innerText = message;
+            toast.className = `toast toast-${type}`;
+            toast.classList.remove('hidden');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return String(dateStr);
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            if (!unsafe && unsafe !== 0) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         // --- Keyboard and Backdrop Dismissal ---
@@ -1601,7 +2533,6 @@
             }
         });
 
-        // Close on backdrop click without losing state
         document.getElementById('incidentModal')?.addEventListener('click', (e) => {
             if (e.target.id === 'incidentModal') closeIncidentModal();
         });
