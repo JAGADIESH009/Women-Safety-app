@@ -51,23 +51,13 @@ export function ContactsScreen() {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       const allLocalContacts = stored ? JSON.parse(stored) : [];
-      let localContacts = allLocalContacts.filter(c => c.userId === user?.uid || !c.userId);
-
-      if (localContacts.length === 0) {
-        const defaultContacts = [
-          { id: `local-1-${Date.now()}`, userId: user?.uid, name: 'Mom', phone: '+1234567890', relation: 'Family', isPrimary: true },
-          { id: `local-2-${Date.now()}`, userId: user?.uid, name: 'Dad', phone: '+0987654321', relation: 'Family', isPrimary: false },
-          { id: `local-3-${Date.now()}`, userId: user?.uid, name: 'Roommate', phone: '+1122334455', relation: 'Friend', isPrimary: false },
-        ];
-        setContacts(defaultContacts);
-        await saveContacts(defaultContacts);
-      } else {
-        setContacts(localContacts);
-      }
+      const localContacts = allLocalContacts.filter(c => c.userId === user?.uid);
+      setContacts(localContacts);
     } catch (e) {
       console.error('Failed to load local contacts', e);
     }
   };
+
 
   const syncContactsWithBackend = async () => {
     if (syncInProgress.current) return;
@@ -80,7 +70,7 @@ export function ContactsScreen() {
 
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       const allLocalContacts = stored ? JSON.parse(stored) : [];
-      let localContacts = allLocalContacts.filter(c => c.userId === user?.uid || !c.userId);
+      let localContacts = allLocalContacts.filter(c => c.userId === user?.uid);
 
       // Process offline deletions
       const pending = await AsyncStorage.getItem(`pending_contact_deletes_${user?.uid}`);
@@ -388,6 +378,17 @@ export function ContactsScreen() {
             renderItem={renderContact}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <User size={32} color={colors.textMuted} />
+                </View>
+                <Text style={styles.emptyTitle}>No Emergency Contacts</Text>
+                <Text style={styles.emptySubtitle}>
+                  Add family members or trusted friends who should be immediately alerted via SMS and phone call during an SOS.
+                </Text>
+              </View>
+            }
           />
         </View>
       )}
@@ -456,28 +457,60 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     color: colors.textPrimary,
   },
   contactPhone: {
-    ...typography.subhead,
+    ...typography.footnote,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  actionButtons: {
+  actions: {
     flexDirection: 'row',
-    gap: spacing.sm,
     alignItems: 'center',
+    gap: spacing.sm,
   },
-  editBtn: {
-    padding: spacing.sm,
+  actionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.bgTertiary,
-    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteBtn: {
-    padding: spacing.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.accentEmergencyMuted,
-    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  addForm: {
-    padding: spacing.lg,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.bgSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 300,
   },
   formTitle: {
     ...typography.h3,
@@ -498,3 +531,4 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     flex: 1,
   }
 });
+

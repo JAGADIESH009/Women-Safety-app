@@ -22,7 +22,9 @@ dist/
 web-build/
 *.jks
 *.keystore
+*.apk
 google-services.json
+!frontend/mobile/google-services.json
 
 # IDEs and OS
 .vscode/

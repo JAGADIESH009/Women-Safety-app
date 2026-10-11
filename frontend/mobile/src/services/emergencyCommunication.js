@@ -35,12 +35,26 @@ export async function sendEmergencySMS(contacts, message) {
       ]);
       
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        // Fallback: If SEND_SMS permission is denied, open native SMS composer for primary contact
+        try {
+          const primary = contacts.find(c => c.isPrimary) || contacts[0];
+          if (primary && primary.phone) {
+            const cleanPhone = primary.phone.replace(/[\s\-\(\)]/g, '');
+            const smsUrl = `sms:${cleanPhone}?body=${encodeURIComponent(message)}`;
+            Linking.canOpenURL(smsUrl).then(supported => {
+              if (supported) Linking.openURL(smsUrl);
+            }).catch(() => {});
+          }
+        } catch (fallbackErr) {
+          console.warn('[SMS] Fallback SMS composer error:', fallbackErr);
+        }
         return contacts.map(c => ({ contact: c, status: 'PERMISSION_DENIED', error: 'Android SEND_SMS permission denied by user' }));
       }
     } catch (err) {
       console.warn('[SMS] Failed to request SMS permission:', err);
     }
   }
+
 
   for (const contact of contacts) {
     console.log(`[SMS] processing contact: ${contact.name}, phone: ${contact.phone}, enabled: ${contact.enabled}`);

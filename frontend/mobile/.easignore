@@ -22,6 +22,7 @@ dist/
 web-build/
 *.jks
 *.keystore
+*.apk
 
 
 # IDEs and OS
@@ -37,7 +38,6 @@ adb_full_dump.txt
 dumpsys.txt
 sos_logcat.txt
 *.html
-*.png
 *.xml
 *.mjs
 *.pyc
@@ -51,4 +51,8 @@ dummy_sa.json
 firebase-credentials.json
 
 # Explicitly keep Expo assets so EAS CLI packs them
+!assets/
+!assets/*
+!assets/**/*.png
 !frontend/mobile/assets/*.png
+

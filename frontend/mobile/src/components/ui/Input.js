@@ -68,7 +68,7 @@ export function Input({
 
 const getStyles = (colors, isDark) => StyleSheet.create({
   container: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     width: '100%',
   },
   label: {
@@ -86,7 +86,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 56,
+    height: 50,
   },
   inputFocused: {
     borderColor: colors.accentBrand,
@@ -101,16 +101,16 @@ const getStyles = (colors, isDark) => StyleSheet.create({
   },
   leadingIconContainer: {
     paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
+    paddingRight: spacing.xs,
     justifyContent: 'center',
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    paddingHorizontal: spacing.md,
-    ...typography.body,
+    paddingHorizontal: spacing.sm,
+    fontSize: 16,
     color: colors.textPrimary,
-    height: '100%',
+    paddingVertical: Platform.OS === 'android' ? 6 : 10,
     backgroundColor: 'transparent',
     ...Platform.select({
       web: { outlineStyle: 'none' }
@@ -118,8 +118,9 @@ const getStyles = (colors, isDark) => StyleSheet.create({
   },
   eyeIcon: {
     paddingHorizontal: spacing.md,
-    height: '100%',
+    height: 50,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
     ...typography.footnote,

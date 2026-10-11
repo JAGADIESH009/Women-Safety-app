@@ -141,7 +141,7 @@ export function RegisterScreen({ navigation }) {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
-              leadingIcon={<Lock size={20} color={colors.textSecondary} />}
+              leadingIcon={<Lock size={18} color={colors.textSecondary} />}
             />
 
             <Button 
@@ -166,7 +166,7 @@ export function RegisterScreen({ navigation }) {
               textStyle={{ fontWeight: '500', color: colors.textPrimary }}
             />
 
-            <View style={{ marginTop: spacing.xxl }}>
+            <View style={styles.signInSection}>
               <Button 
                 title="Already have an account? Sign in"
                 variant="outline"
@@ -183,40 +183,41 @@ export function RegisterScreen({ navigation }) {
 
 const getStyles = (colors, shadows, isDark) => StyleSheet.create({
   content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
   },
   brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.accentBrandMuted,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(124, 58, 237, 0.15)',
+    borderColor: colors.accentBrand,
     ...shadows.glowBrand,
     overflow: 'hidden',
   },
   logoImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   brandTitle: {
     ...typography.h1,
-    fontSize: 36,
+    fontSize: 32,
     letterSpacing: -0.5,
     color: colors.textPrimary,
   },
@@ -228,7 +229,7 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
   formCard: {
     backgroundColor: colors.bgSecondary,
     borderRadius: borderRadius.xl,
-    padding: spacing.xl,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
     ...shadows.subtle,
@@ -237,7 +238,7 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     backgroundColor: colors.accentEmergencyMuted,
     padding: spacing.md,
     borderRadius: borderRadius.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     borderLeftWidth: 3,
     borderLeftColor: colors.accentEmergency,
   },
@@ -250,13 +251,13 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     width: '100%',
   },
   registerButton: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginVertical: spacing.md,
     gap: spacing.md,
   },
   dividerLine: {
@@ -273,18 +274,8 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  footer: {
-    flexDirection: 'row',
-    marginTop: spacing.xxl,
-    justifyContent: 'center',
+  signInSection: {
+    marginTop: spacing.md,
   },
-  footerText: {
-    ...typography.subhead,
-    color: colors.textSecondary,
-  },
-  signIn: {
-    ...typography.subhead,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  }
 });
+

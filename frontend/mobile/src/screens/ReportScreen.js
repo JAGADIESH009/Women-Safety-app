@@ -73,8 +73,9 @@ export function ReportScreen({ navigation }) {
       const contactsStore = await AsyncStorage.getItem('women_safety_contacts');
       let contacts = [];
       if (contactsStore) {
-        contacts = JSON.parse(contactsStore).filter(c => c.enabled);
+        contacts = JSON.parse(contactsStore).filter(c => (c.userId === user?.uid || !c.userId) && c.enabled !== false);
       }
+
 
       if (contacts.length > 0) {
         const message = buildEmergencyMessage(

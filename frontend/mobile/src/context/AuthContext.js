@@ -63,6 +63,8 @@ export const AuthProvider = ({ children }) => {
           name: firebaseUser.displayName || extraProfile.name || 'User',
           phone: extraProfile.phone || firebaseUser.phoneNumber || 'Not provided',
           bloodGroup: extraProfile.bloodGroup || 'O+',
+          medicalNotes: extraProfile.medicalNotes || '',
+          allergies: extraProfile.allergies || '',
         };
         setUser(userData);
         setLoading(false); // Unblock UI immediately
@@ -108,7 +110,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       // Save additional profile data using existing persistence architecture
-      const extraProfile = { name, phone };
+      const extraProfile = { name, phone, bloodGroup: 'O+', medicalNotes: '', allergies: '' };
       try {
         await AsyncStorage.setItem(`@profile_${user.uid}`, JSON.stringify(extraProfile));
       } catch (e) {
@@ -120,7 +122,9 @@ export const AuthProvider = ({ children }) => {
         email: user.email,
         name: name,
         phone: phone,
-        bloodGroup: 'O+'
+        bloodGroup: 'O+',
+        medicalNotes: '',
+        allergies: '',
       };
       setUser(userData);
       
@@ -149,7 +153,7 @@ export const AuthProvider = ({ children }) => {
       }
       throw error;
     }
-  }
+  };
 
   const loginWithGoogle = async () => {
     if (!isFirebaseConfigured) throw new Error("Firebase Auth is not configured. Missing API keys.");
@@ -194,19 +198,90 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUserProfile = async (updates) => {
+    if (!user) return;
+    try {
+      // 1. Fetch current extra profile
+      let currentExtra = {};
+      try {
+        const str = await AsyncStorage.getItem(`@profile_${user.uid}`);
+        if (str) currentExtra = JSON.parse(str);
+      } catch (e) {
+        console.warn("Could not read profile from storage:", e);
+      }
+
+      // 2. Merge non-blank values to avoid overwriting existing fields with blank
+      const mergedExtra = {
+        name: updates.name?.trim() ? updates.name.trim() : (currentExtra.name || user.name),
+        phone: updates.phone?.trim() ? updates.phone.trim() : (currentExtra.phone || user.phone),
+        bloodGroup: updates.bloodGroup?.trim() ? updates.bloodGroup.trim() : (currentExtra.bloodGroup || user.bloodGroup || 'O+'),
+        medicalNotes: updates.medicalNotes !== undefined ? updates.medicalNotes : (currentExtra.medicalNotes || user.medicalNotes || ''),
+        allergies: updates.allergies !== undefined ? updates.allergies : (currentExtra.allergies || user.allergies || ''),
+      };
+
+      await AsyncStorage.setItem(`@profile_${user.uid}`, JSON.stringify(mergedExtra));
+
+      // 3. Update Firebase display name if name changed
+      if (auth.currentUser && mergedExtra.name && mergedExtra.name !== auth.currentUser.displayName) {
+        try {
+          await updateProfile(auth.currentUser, { displayName: mergedExtra.name });
+        } catch (e) {
+          console.warn("Firebase displayName update failed:", e);
+        }
+      }
+
+      // 4. Update local user state
+      const updatedUser = {
+        ...user,
+        name: mergedExtra.name,
+        phone: mergedExtra.phone,
+        bloodGroup: mergedExtra.bloodGroup,
+        medicalNotes: mergedExtra.medicalNotes,
+        allergies: mergedExtra.allergies,
+      };
+      setUser(updatedUser);
+
+      // 5. Sync to backend API
+      try {
+        await api.syncUser({
+          email: user.email,
+          name: mergedExtra.name !== 'User' ? mergedExtra.name : undefined,
+          phone: mergedExtra.phone !== 'Not provided' ? mergedExtra.phone : undefined,
+          blood_group: mergedExtra.bloodGroup,
+        });
+      } catch (e) {
+        console.log("Backend profile sync failed:", e.message);
+      }
+
+      return updatedUser;
+    } catch (err) {
+      console.error("Failed to update user profile:", err);
+      throw err;
+    }
+  };
+
   const logout = async () => {
     if (!isFirebaseConfigured) {
       setUser(null);
       return;
     }
+    // Allow user to choose a different Google account next time without revoking access
+    if (Platform.OS !== 'web') {
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        console.log("Google Sign-In signOut error:", e);
+      }
+    }
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, logout, loading, configMissing }}>
+    <AuthContext.Provider value={{ user, login, register, loginWithGoogle, updateUserProfile, logout, loading, configMissing }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => useContext(AuthContext);

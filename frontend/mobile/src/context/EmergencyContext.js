@@ -107,7 +107,7 @@ export const EmergencyProvider = ({ children }) => {
     try {
       const contactsStore = await AsyncStorage.getItem('women_safety_contacts');
       if (contactsStore) {
-        const parsedContacts = JSON.parse(contactsStore);
+        const parsedContacts = JSON.parse(contactsStore).filter(c => (c.userId === user?.uid || !c.userId) && c.enabled !== false);
         if (parsedContacts.length > 0) {
           initialTimeline.push({ time: new Date(now.getTime() + 100).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), event: 'Emergency contacts ready' });
           selectedContacts = parsedContacts;
@@ -116,6 +116,7 @@ export const EmergencyProvider = ({ children }) => {
     } catch (e) {
       console.error('Failed to read contacts during SOS activation', e);
     }
+
 
     const newIncident = {
       id: `#INC-${Math.floor(100000 + Math.random() * 900000)}`,
