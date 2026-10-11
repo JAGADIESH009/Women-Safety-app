@@ -18,7 +18,6 @@ export const APP_CONFIG = {
   
   // Official Links
   githubRepoUrl: import.meta.env.VITE_GITHUB_REPO_URL || 'https://github.com/JAGADIESH009/Women-Safety-app',
-  adminPortalUrl: import.meta.env.VITE_ADMIN_PORTAL_URL || 'https://safeher-admin-panel.vercel.app/',
   supportEmail: import.meta.env.VITE_SUPPORT_EMAIL || 'jagadiesh0009@gmail.com',
 
   // Verified Emergency Numbers

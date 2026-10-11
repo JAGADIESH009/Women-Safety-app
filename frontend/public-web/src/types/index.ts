@@ -1,14 +1,11 @@
 export type PageView = 
-  | 'home' 
+  | 'welcome'
   | 'dashboard' 
   | 'features' 
   | 'contacts' 
-  | 'reports' 
-  | 'profile' 
   | 'resources' 
-  | 'download' 
-  | 'about' 
-  | 'contact' 
+  | 'profile' 
+  | 'reports' 
   | 'privacy' 
   | 'terms';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, Home } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard } from 'lucide-react';
 import type { PageView } from '../types';
 
 interface NotFoundViewProps {
@@ -26,11 +26,11 @@ export const NotFoundView: React.FC<NotFoundViewProps> = ({ onNavigate }) => {
       </div>
 
       <button
-        onClick={() => onNavigate('home')}
+        onClick={() => onNavigate('dashboard')}
         className="py-3 px-6 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-xs inline-flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"
       >
-        <Home className="w-4 h-4" />
-        Return to SafeHer Companion Home
+        <LayoutDashboard className="w-4 h-4" />
+        Return to Safety Dashboard
       </button>
     </div>
   );

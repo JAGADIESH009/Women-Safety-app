@@ -6,8 +6,6 @@ import {
   Cloud, 
   PhoneOutgoing, 
   Map, 
-  ShieldCheck, 
-  ArrowRight,
   Smartphone,
   Globe,
   CheckCircle2,
@@ -294,33 +292,6 @@ export const Features: React.FC<FeaturesProps> = ({ onExploreDashboard }) => {
               </div>
             </div>
 
-          </div>
-        </div>
-
-        {/* Companion SOC Banner */}
-        <div className="card card-elevated soc-companion-banner">
-          <div className="soc-banner-content">
-            <div className="soc-banner-icon">
-              <ShieldCheck size={32} className="text-brand" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-1">Companion Safety Operations Center (SOC)</h3>
-              <p className="text-secondary text-sm">
-                Active incidents triggered from the SafeHer mobile app synchronize immediately with the
-                official SOC Dashboard for responder coordination, live map tracking, and resolution logging.
-              </p>
-            </div>
-          </div>
-          <div className="soc-banner-action">
-            <a 
-              href={APP_CONFIG.adminPortalUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="btn btn-secondary"
-            >
-              <span>View Admin Dashboard</span>
-              <ArrowRight size={16} />
-            </a>
           </div>
         </div>
       </div>

@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { SafetyStatsBanner } from './components/SafetyStatsBanner';
-import { Features } from './components/Features';
-import { HowItWorks } from './components/HowItWorks';
-import { InteractiveDemo } from './components/InteractiveDemo';
-import { DownloadSection } from './components/DownloadSection';
-import { AboutSection } from './components/AboutSection';
-import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { AccountModal } from './components/AccountModal';
 
-// New Web Companion App Views
+// Application Views
+import { WelcomeAuthView } from './components/WelcomeAuthView';
 import { WebDashboard } from './components/WebDashboard';
+import { Features } from './components/Features';
 import { ContactsManager } from './components/ContactsManager';
 import { IncidentReporting } from './components/IncidentReporting';
 import { UserProfileView } from './components/UserProfileView';
@@ -25,39 +19,50 @@ import { NotFoundView } from './components/NotFoundView';
 import type { PageView } from './types';
 
 export const AppContent: React.FC = () => {
+  const { user, isGuest, loading } = useAuth();
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<PageView>('home');
+  const [currentView, setCurrentView] = useState<PageView | 'not-found'>('welcome');
 
-  // Hash-based SPA routing with browser history support
+  // Synchronize route with URL hash and authentication state
   useEffect(() => {
-    const handleHashChange = () => {
+    if (loading) return;
+
+    const syncRouteFromHash = () => {
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      const validViews: PageView[] = [
-        'home', 
-        'dashboard', 
-        'features', 
-        'contacts', 
-        'reports', 
-        'profile', 
-        'resources', 
-        'download', 
-        'about', 
-        'contact', 
-        'privacy', 
-        'terms'
+      const validAppViews: PageView[] = [
+        'welcome',
+        'dashboard',
+        'features',
+        'contacts',
+        'resources',
+        'profile',
+        'reports',
+        'privacy',
+        'terms',
       ];
-      
-      if (validViews.includes(hash as PageView)) {
+
+      if (!hash || hash === 'welcome') {
+        // Root visit or explicit welcome hash
+        if (user || isGuest) {
+          // Returning authenticated user or active guest session -> Go directly to Dashboard
+          setCurrentView('dashboard');
+          window.location.hash = 'dashboard';
+        } else {
+          // New visitor or signed out -> Show Welcome / Authentication screen
+          setCurrentView('welcome');
+        }
+      } else if (validAppViews.includes(hash as PageView)) {
+        // If guest or authenticated, or accessing public resource/terms/privacy
         setCurrentView(hash as PageView);
-      } else if (!hash) {
-        setCurrentView('home');
+      } else {
+        setCurrentView('not-found');
       }
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    syncRouteFromHash();
+    window.addEventListener('hashchange', syncRouteFromHash);
+    return () => window.removeEventListener('hashchange', syncRouteFromHash);
+  }, [user, isGuest, loading]);
 
   const navigateTo = (view: PageView) => {
     setCurrentView(view);
@@ -65,26 +70,35 @@ export const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const scrollToDemo = () => {
-    navigateTo('dashboard');
-  };
+  // Loading Splash Screen
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--color-bg-base)] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-2 shadow-sm mb-4 animate-pulse">
+          <img src="/logo.png" alt="SafeHer" className="w-full h-full object-cover rounded-lg" />
+        </div>
+        <p className="text-xs font-semibold text-[var(--color-text-primary)]">SafeHer Companion</p>
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Initializing secure session...</p>
+      </div>
+    );
+  }
+
+  // First-visit authentication / welcome flow
+  if (currentView === 'welcome') {
+    return (
+      <>
+        <WelcomeAuthView onEnterDashboard={() => navigateTo('dashboard')} />
+        <AccountModal 
+          isOpen={accountModalOpen} 
+          onClose={() => setAccountModalOpen(false)} 
+          onNavigate={navigateTo} 
+        />
+      </>
+    );
+  }
 
   const renderCurrentView = () => {
     switch (currentView) {
-      case 'home':
-        return (
-          <>
-            <Hero onTriggerDemo={scrollToDemo} onNavigate={navigateTo} />
-            <SafetyStatsBanner />
-            <Features onExploreDashboard={() => navigateTo('dashboard')} />
-            <HowItWorks />
-            <InteractiveDemo />
-            <DownloadSection />
-            <AboutSection />
-            <ContactSection />
-          </>
-        );
-
       case 'dashboard':
         return (
           <WebDashboard 
@@ -127,27 +141,6 @@ export const AppContent: React.FC = () => {
       case 'resources':
         return <SafetyResourcesView onNavigate={navigateTo} />;
 
-      case 'about':
-        return (
-          <div className="py-8">
-            <AboutSection />
-          </div>
-        );
-
-      case 'download':
-        return (
-          <div className="py-8">
-            <DownloadSection />
-          </div>
-        );
-
-      case 'contact':
-        return (
-          <div className="py-8">
-            <ContactSection />
-          </div>
-        );
-
       case 'privacy':
         return <LegalViews view="privacy" onNavigate={navigateTo} />;
 
@@ -160,33 +153,33 @@ export const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text-primary)]">
-      {/* Top Navbar */}
+    <div className="min-h-screen flex flex-col bg-[var(--color-bg-base)] text-[var(--color-text-primary)]">
+      {/* Primary Application Header */}
       <Navbar 
-        currentView={currentView}
-        onNavigate={navigateTo}
+        currentView={currentView as PageView} 
+        onNavigate={navigateTo} 
         onOpenAccountModal={() => setAccountModalOpen(true)} 
       />
-      
-      {/* Main Content Area */}
-      <main id="main-content" className="flex-1">
+
+      {/* Main Product Application View */}
+      <main className="flex-1">
         {renderCurrentView()}
       </main>
 
-      {/* Footer */}
+      {/* Application Footer */}
       <Footer onNavigate={navigateTo} />
 
-      {/* Account / Guest / Google Auth Dialog */}
+      {/* Account / Guest Authentication Modal */}
       <AccountModal 
         isOpen={accountModalOpen} 
-        onClose={() => setAccountModalOpen(false)}
-        onNavigate={navigateTo}
+        onClose={() => setAccountModalOpen(false)} 
+        onNavigate={navigateTo} 
       />
     </div>
   );
 };
 
-export default function App() {
+export const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -194,4 +187,6 @@ export default function App() {
       </AuthProvider>
     </ThemeProvider>
   );
-}
+};
+
+export default App;

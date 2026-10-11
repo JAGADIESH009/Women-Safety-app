@@ -447,23 +447,6 @@ p {
   color: var(--brand-primary);
 }
 
-.nav-link-admin {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 6px;
-  background-color: var(--brand-subtle);
-  color: var(--brand-primary);
-  border: 1px solid var(--brand-border);
-  font-weight: 600;
-  font-size: 0.82rem;
-}
-
-.nav-link-admin:hover {
-  background-color: var(--brand-primary);
-  color: #FFFFFF;
-}
 
 .nav-actions {
   display: flex;

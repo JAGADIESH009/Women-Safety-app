@@ -7,7 +7,6 @@ import {
   Activity, 
   CheckCircle2, 
   Sparkles, 
-  Download,
   Volume2,
   VolumeX,
   Radio,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { APP_CONFIG } from '../config/appConfig';
 import type { PageView, SafetyReadinessItem } from '../types';
 
 interface WebDashboardProps {
@@ -237,27 +235,19 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
             {!user ? (
               <button
                 onClick={onOpenAccountModal}
-                className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md"
+                className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
               >
                 <Lock className="w-3.5 h-3.5" />
-                Sign In to Sync with Cloud
+                <span>Sign In to Sync Cloud</span>
               </button>
             ) : (
               <button
                 onClick={() => onNavigate('profile')}
                 className="py-2.5 px-4 rounded-xl bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs font-semibold hover:border-[var(--color-primary)] transition-colors"
               >
-                Edit Medical Profile
+                <span>Edit Medical Profile</span>
               </button>
             )}
-
-            <a
-              href={APP_CONFIG.downloadUrl}
-              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white text-xs font-semibold flex items-center gap-2 shadow-sm hover:opacity-90 transition-opacity"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download APK
-            </a>
           </div>
         </div>
       </div>

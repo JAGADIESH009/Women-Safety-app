@@ -97,6 +97,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     if (onNavigate) onNavigate('dashboard');
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    onClose();
+    if (onNavigate) onNavigate('welcome');
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
@@ -262,7 +268,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
               {/* Sign Out Button */}
               <button
-                onClick={signOut}
+                onClick={handleSignOut}
                 disabled={loading}
                 className="w-full py-3 px-4 rounded-xl border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
               >

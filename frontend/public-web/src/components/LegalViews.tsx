@@ -13,11 +13,11 @@ export const LegalViews: React.FC<LegalViewsProps> = ({ view, onNavigate }) => {
       
       {/* Back button */}
       <button
-        onClick={() => onNavigate('home')}
+        onClick={() => onNavigate('dashboard')}
         className="flex items-center gap-2 text-xs font-semibold text-[var(--color-primary)] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        Return to Home
+        Return to Dashboard
       </button>
 
       {view === 'privacy' ? (
