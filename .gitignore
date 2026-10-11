@@ -54,3 +54,7 @@ firebase-credentials.json
 
 # Explicitly keep Expo assets so EAS CLI packs them
 !frontend/mobile/assets/*.png
+!frontend/admin/index.html
+!frontend/public-web/index.html
+!frontend/public-web/public/*.png
+
