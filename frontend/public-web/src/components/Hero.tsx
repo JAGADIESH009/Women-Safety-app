@@ -3,21 +3,22 @@ import {
   Download, 
   ShieldCheck, 
   Radio, 
-  PhoneCall, 
-  MapPin, 
   CheckCircle2, 
   Sparkles, 
   ArrowRight, 
   ShieldAlert, 
-  Info
+  Info,
+  Activity
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/appConfig';
+import type { PageView } from '../types';
 
 interface HeroProps {
-  onTriggerDemo: () => void;
+  onTriggerDemo?: () => void;
+  onNavigate?: (view: PageView) => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onTriggerDemo }) => {
+export const Hero: React.FC<HeroProps> = ({ onTriggerDemo, onNavigate }) => {
   const [phoneSosActive, setPhoneSosActive] = useState(false);
   const [phoneCountdown, setPhoneCountdown] = useState<number | null>(null);
 
@@ -73,7 +74,7 @@ export const Hero: React.FC<HeroProps> = ({ onTriggerDemo }) => {
             <div className="hero-download-card">
               <div className="download-actions">
                 <a 
-                  href={APP_CONFIG.downloadUrl}
+                  href={APP_CONFIG.apkDownloadUrl}
                   download={APP_CONFIG.apkFilename}
                   className="btn btn-primary btn-lg hero-cta-btn"
                   id="hero-download-apk-button"
@@ -84,11 +85,12 @@ export const Hero: React.FC<HeroProps> = ({ onTriggerDemo }) => {
                 </a>
 
                 <button 
-                  onClick={onTriggerDemo}
+                  onClick={() => onNavigate ? onNavigate('dashboard') : (onTriggerDemo && onTriggerDemo())}
                   className="btn btn-secondary btn-lg"
-                  title="Test emergency simulation in browser"
+                  title="Launch Web Safety Dashboard & Simulator"
                 >
-                  <span>Interactive Simulator</span>
+                  <Activity size={18} className="text-[var(--color-primary)]" />
+                  <span>Launch Web Dashboard</span>
                   <ArrowRight size={17} />
                 </button>
               </div>
@@ -148,113 +150,84 @@ export const Hero: React.FC<HeroProps> = ({ onTriggerDemo }) => {
                   <div className="phone-status-bar">
                     <span className="font-mono text-xs">09:41</span>
                     <div className="status-icons">
-                      <Radio size={12} className="text-emerald animate-pulse" />
-                      <span className="text-xs font-mono">LTE • 98%</span>
+                      <span className="status-bar-pill">5G</span>
+                      <span className="status-bar-pill">98%</span>
                     </div>
                   </div>
 
                   {/* App Header */}
                   <div className="phone-app-header">
                     <div className="flex items-center gap-2">
-                      <div className="phone-logo-dot">
-                        <img src="/logo.png" alt="SafeHer" className="w-5 h-5 rounded-full object-cover" />
-                      </div>
-                      <div>
-                        <div className="phone-app-title">SafeHer Companion</div>
-                        <div className="phone-app-subtitle">
-                          {phoneSosActive ? 'CRITICAL DISPATCH ACTIVE' : 'Background Shield Active'}
-                        </div>
-                      </div>
+                      <img src="/logo.png" alt="SafeHer" className="w-5 h-5 rounded object-cover" />
+                      <span className="font-bold text-sm">SafeHer Shield</span>
                     </div>
-                    <div className={`phone-status-pill ${phoneSosActive ? 'pill-emergency' : 'pill-safe'}`}>
-                      <span className="pill-dot" />
-                      <span>{phoneSosActive ? 'SOS ALERT' : 'SECURE'}</span>
-                    </div>
+                    <span className="phone-live-indicator">
+                      <span className="live-dot" />
+                      GUARD ON
+                    </span>
                   </div>
 
-                  {/* Readiness Card */}
-                  <div className="phone-readiness-card">
-                    <div className="readiness-meta">
-                      <div className="text-xs text-muted">Safety Readiness</div>
-                      <div className="font-bold text-sm text-emerald">100% Prepared</div>
-                    </div>
-                    <div className="readiness-bar-track">
-                      <div className="readiness-bar-fill" style={{ width: '100%' }} />
-                    </div>
-                    <div className="readiness-tags">
-                      <span>✓ GPS Active</span>
-                      <span>✓ 3 Contacts</span>
-                      <span>✓ Audio Rec Ready</span>
-                    </div>
-                  </div>
-
-                  {/* SOS Interactive Trigger Area */}
-                  <div className="phone-sos-center">
-                    <div className={`sos-ring-outer ${phoneSosActive ? 'sos-ring-active' : ''}`}>
-                      {phoneSosActive && <div className="radar-ring" />}
-                      <button 
-                        onClick={handlePhoneSosClick}
-                        className={`phone-sos-btn ${phoneSosActive ? 'sos-btn-active' : ''}`}
-                        aria-label="Simulate SafeHer SOS Emergency Trigger"
-                        title="Click to simulate mobile SOS button"
-                      >
+                  {/* Central SOS Trigger Button */}
+                  <div className="phone-center-zone">
+                    <button
+                      onClick={handlePhoneSosClick}
+                      className={`phone-sos-button ${phoneSosActive ? 'active' : ''} ${phoneCountdown !== null ? 'counting' : ''}`}
+                      aria-label="Interactive SOS Test Button"
+                      id="interactive-phone-sos-button"
+                    >
+                      <div className="sos-pulse-ring ring-1" />
+                      <div className="sos-pulse-ring ring-2" />
+                      <div className="sos-button-core">
                         {phoneCountdown !== null ? (
-                          <div className="sos-countdown-text">{phoneCountdown}</div>
+                          <div className="countdown-display">
+                            <span className="count-number">{phoneCountdown}</span>
+                            <span className="count-label">HOLD TO ABORT</span>
+                          </div>
                         ) : phoneSosActive ? (
-                          <>
-                            <ShieldAlert size={36} className="text-white" />
-                            <span className="sos-btn-label">CANCEL SOS</span>
-                          </>
+                          <div className="active-display">
+                            <Radio size={28} className="animate-spin text-white mb-1" />
+                            <span className="sos-text">ACTIVE</span>
+                            <span className="sub-text">TAP TO RESET</span>
+                          </div>
                         ) : (
-                          <>
-                            <Radio size={32} className="text-white" />
-                            <span className="sos-btn-label">EMERGENCY SOS</span>
-                            <span className="sos-sub-label">TAP TO TRIGGER</span>
-                          </>
+                          <div className="idle-display">
+                            <ShieldAlert size={32} className="text-white mb-1" />
+                            <span className="sos-text">SOS</span>
+                            <span className="sub-text">TAP TO TEST</span>
+                          </div>
                         )}
-                      </button>
-                    </div>
-                    <p className="phone-sos-hint">
-                      {phoneSosActive 
-                        ? 'Broadcasting live coordinates & audio recording...' 
-                        : 'Hold or tap to trigger 3s emergency countdown'}
+                      </div>
+                    </button>
+                    <p className="phone-status-hint">
+                      {phoneSosActive ? (
+                        <span className="text-emergency font-semibold">Broadcasting Live Telemetry to SOC</span>
+                      ) : phoneCountdown !== null ? (
+                        <span className="text-warning font-semibold">Counting down... Tap to cancel</span>
+                      ) : (
+                        'Tap the SOS button to simulate emergency broadcast'
+                      )}
                     </p>
                   </div>
 
-                  {/* Telemetry Snapshot */}
-                  <div className="phone-telemetry-box">
-                    <div className="telemetry-row">
-                      <MapPin size={13} className="text-brand" />
-                      <span className="font-mono text-xs truncate">Lat 13.0827° N, Long 80.2707° E</span>
+                  {/* Phone Bottom Cards */}
+                  <div className="phone-quick-cards">
+                    <div className="phone-card">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold text-secondary">AI Risk Level</span>
+                        <span className="badge badge-success text-[10px] py-0 px-1.5">LOW (0.12)</span>
+                      </div>
+                      <p className="text-[11px] text-muted">Ambient noise normal • Safe zone verified</p>
                     </div>
-                    <div className="telemetry-row">
-                      <PhoneCall size={13} className="text-emerald" />
-                      <span className="text-xs">SMS Dispatch: Ready (3 Trusted Contacts)</span>
-                    </div>
-                  </div>
 
-                  {/* Bottom Navigation Mockup */}
-                  <div className="phone-bottom-nav">
-                    <div className="phone-nav-item active">
-                      <ShieldCheck size={16} />
-                      <span>Protect</span>
-                    </div>
-                    <div className="phone-nav-item">
-                      <MapPin size={16} />
-                      <span>Safe Map</span>
-                    </div>
-                    <div className="phone-nav-item">
-                      <PhoneCall size={16} />
-                      <span>Fake Call</span>
+                    <div className="phone-card">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold text-secondary">Trusted Guardians</span>
+                        <span className="text-[11px] font-mono font-bold text-brand">3 Linked</span>
+                      </div>
+                      <p className="text-[11px] text-muted">Ready for SMS & Google Maps dispatch</p>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Companion Floating Badge */}
-              <div className="device-floating-badge">
-                <Radio size={14} className="text-emerald animate-pulse" />
-                <span>Connected to Cloud SOC</span>
               </div>
             </div>
           </div>

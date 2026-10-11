@@ -14,6 +14,7 @@ export const APP_CONFIG = {
   
   // Single centrally configured download URL
   downloadUrl: import.meta.env.VITE_APK_DOWNLOAD_URL || 'https://github.com/JAGADIESH009/Women-Safety-app/releases/latest/download/SafeHer.apk',
+  apkDownloadUrl: import.meta.env.VITE_APK_DOWNLOAD_URL || 'https://github.com/JAGADIESH009/Women-Safety-app/releases/latest/download/SafeHer.apk',
   
   // Official Links
   githubRepoUrl: import.meta.env.VITE_GITHUB_REPO_URL || 'https://github.com/JAGADIESH009/Women-Safety-app',
@@ -27,6 +28,7 @@ export const APP_CONFIG = {
     { name: 'Police Control Room', number: '100', desc: 'Direct immediate police dispatch' },
     { name: 'Domestic Abuse Helpline', number: '181', desc: 'Toll-free women in distress counseling & rescue' },
     { name: 'Ambulance & Medical', number: '108', desc: 'Emergency medical services' },
+    { name: 'Childline Helpdesk', number: '1098', desc: 'Child protection & rescue assistance' },
   ],
 
   // Core Pillars verified in the codebase
