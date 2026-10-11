@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   /* Common Brand Colors */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -74,11 +76,49 @@
   --hero-glow: radial-gradient(circle at 50% 15%, rgba(178, 58, 91, 0.18) 0%, rgba(20, 10, 13, 0) 70%);
 }
 
-/* Base Reset */
+/* Base Reset & Asset Safeguards */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+img, svg, video, canvas, audio, iframe, embed, object {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  outline: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Explicit Brand Asset Guardrails */
+.sh-logo, .brand-icon, .brand-logo img, [alt*="SafeHer"] {
+  max-width: 48px;
+  max-height: 48px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.sh-logo-sm {
+  width: 28px !important;
+  height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 html {

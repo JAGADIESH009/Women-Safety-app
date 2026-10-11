@@ -136,7 +136,10 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
                 <img 
                   src="/logo.png" 
                   alt="SafeHer Shield" 
-                  className="w-10 h-10 rounded-xl object-cover"
+                  width={40}
+                  height={40}
+                  style={{ width: '40px', height: '40px', maxWidth: '40px', maxHeight: '40px' }}
+                  className="sh-logo w-10 h-10 rounded-xl object-cover shrink-0"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}

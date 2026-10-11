@@ -23,7 +23,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         {/* Brand & Mission */}
         <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="SafeHer" className="w-6 h-6 rounded-lg object-cover" />
+            <img src="/logo.png" alt="SafeHer" width={24} height={24} style={{ width: '24px', height: '24px', maxWidth: '24px', maxHeight: '24px' }} className="w-6 h-6 rounded-lg object-cover shrink-0" />
             <span className="font-extrabold text-sm text-[var(--color-text-primary)] tracking-tight">SafeHer</span>
           </div>
           <span className="hidden sm:inline text-[var(--color-text-muted)]">•</span>

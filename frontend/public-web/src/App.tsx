@@ -74,8 +74,8 @@ export const AppContent: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--color-bg-base)] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-2 shadow-sm mb-4 animate-pulse">
-          <img src="/logo.png" alt="SafeHer" className="w-full h-full object-cover rounded-lg" />
+        <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-2 shadow-sm mb-4 animate-pulse overflow-hidden shrink-0" style={{ width: '48px', height: '48px' }}>
+          <img src="/logo.png" alt="SafeHer" width={32} height={32} style={{ width: '32px', height: '32px', maxWidth: '32px', maxHeight: '32px' }} className="w-full h-full object-cover rounded-lg" />
         </div>
         <p className="text-xs font-semibold text-[var(--color-text-primary)]">SafeHer Companion</p>
         <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Initializing secure session...</p>

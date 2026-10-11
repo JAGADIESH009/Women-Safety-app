@@ -69,10 +69,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2.5 text-left focus:outline-none group" 
             aria-label="SafeHer Dashboard"
           >
-            <div className="w-8 h-8 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] p-1 flex items-center justify-center shadow-sm group-hover:border-[var(--color-primary)] transition-colors">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] p-1 flex items-center justify-center shadow-sm group-hover:border-[var(--color-primary)] transition-colors shrink-0 overflow-hidden" style={{ width: '32px', height: '32px' }}>
               <img 
                 src="/logo.png" 
                 alt="SafeHer Logo" 
+                width={24}
+                height={24}
+                style={{ width: '24px', height: '24px', maxWidth: '24px', maxHeight: '24px' }}
                 className="w-full h-full rounded-lg object-cover" 
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
