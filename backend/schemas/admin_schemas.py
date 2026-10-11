@@ -1,12 +1,17 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
-from .api_schemas import IncidentResponse, LocationResponse, UserResponse
-from typing import Optional
+from .api_schemas import IncidentResponse, LocationResponse, UserResponse, ContactResponse
+
+class UserWithContactsResponse(UserResponse):
+    contacts: List[ContactResponse] = []
+
+    class Config:
+        from_attributes = True
 
 class IncidentAdminResponse(IncidentResponse):
     locations: List[LocationResponse] = []
-    user: Optional[UserResponse] = None
+    user: Optional[UserWithContactsResponse] = None
 
     class Config:
         from_attributes = True

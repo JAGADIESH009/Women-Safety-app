@@ -42,6 +42,7 @@ class Incident(Base):
     status = Column(String, default="ACTIVE") # 'ACTIVE', 'RESOLVED'
     start_time = Column(DateTime(timezone=True), server_default=func.now())
     end_time = Column(DateTime(timezone=True), nullable=True)
+    resolved_by = Column(String, nullable=True)
 
     user = relationship("User", back_populates="incidents")
     locations = relationship("Location", back_populates="incident", cascade="all, delete-orphan")

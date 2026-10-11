@@ -60,6 +60,7 @@ class IncidentResponse(IncidentBase):
     status: str
     start_time: datetime
     end_time: Optional[datetime] = None
+    resolved_by: Optional[str] = None
 
     class Config:
         from_attributes = True

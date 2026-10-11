@@ -9,6 +9,23 @@ from database.models import Base
 # Auto-create tables (safe if they already exist)
 Base.metadata.create_all(bind=engine)
 
+def ensure_schema_compatibility():
+    if not engine:
+        return
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        if "incidents" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("incidents")]
+            if "resolved_by" not in columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE incidents ADD COLUMN resolved_by VARCHAR;"))
+                    conn.commit()
+    except Exception as e:
+        print(f"Non-critical schema check note: {e}")
+
+ensure_schema_compatibility()
+
 # Ensure environment variables are loaded
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(backend_dir, ".env")

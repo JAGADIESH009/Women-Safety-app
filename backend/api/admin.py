@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 from database.models import User, Incident
@@ -44,6 +44,15 @@ def verify_admin(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
         
     return admin_user
 
+@router.get("/me")
+def get_current_admin(admin_user: AdminUser = Depends(verify_admin)):
+    """Returns profile details for the authenticated administrator."""
+    return {
+        "id": admin_user.id,
+        "admin_id": admin_user.admin_id,
+        "email": admin_user.email
+    }
+
 @router.get("/dashboard", response_model=AdminDashboardResponse)
 def get_dashboard_stats(db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
     """Returns aggregated statistics for the admin dashboard."""
@@ -55,7 +64,6 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin_user: AdminUser = D
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     
     # Group by date using SQLAlchemy (works in Postgres and SQLite)
-    # Using cast to Date is cross-compatible or specific to Postgres
     from sqlalchemy.types import Date
     from sqlalchemy import cast
     
@@ -75,7 +83,7 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin_user: AdminUser = D
     # Recent incidents (last 10)
     recent_incidents = (
         db.query(Incident)
-        .options(joinedload(Incident.locations), joinedload(Incident.user))
+        .options(joinedload(Incident.locations), joinedload(Incident.user).joinedload(User.contacts))
         .order_by(Incident.start_time.desc())
         .limit(10)
         .all()
@@ -91,14 +99,63 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin_user: AdminUser = D
 
 @router.get("/incidents", response_model=List[IncidentAdminResponse])
 def get_all_incidents(db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
-    """Returns all incidents with locations and users for the admin map."""
+    """Returns all incidents with locations, user details, and emergency contacts."""
     incidents = (
         db.query(Incident)
-        .options(joinedload(Incident.locations), joinedload(Incident.user))
+        .options(joinedload(Incident.locations), joinedload(Incident.user).joinedload(User.contacts))
         .order_by(Incident.start_time.desc())
         .all()
     )
     return incidents
+
+@router.get("/incidents/{incident_id}", response_model=IncidentAdminResponse)
+def get_incident_by_id(incident_id: int, db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
+    """Returns comprehensive details for a specific incident including user, contacts, and locations."""
+    incident = (
+        db.query(Incident)
+        .options(joinedload(Incident.locations), joinedload(Incident.user).joinedload(User.contacts))
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident #{incident_id} not found"
+        )
+    return incident
+
+@router.put("/incidents/{incident_id}/resolve", response_model=IncidentAdminResponse)
+@router.post("/incidents/{incident_id}/resolve", response_model=IncidentAdminResponse)
+def resolve_incident(incident_id: int, db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
+    """
+    Marks an incident as RESOLVED, recording the resolution timestamp and the resolving admin.
+    Prevents duplicate resolution and rejects unauthorized or invalid attempts.
+    """
+    incident = (
+        db.query(Incident)
+        .options(joinedload(Incident.locations), joinedload(Incident.user).joinedload(User.contacts))
+        .filter(Incident.id == incident_id)
+        .first()
+    )
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident #{incident_id} not found"
+        )
+        
+    if incident.status == "RESOLVED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"Incident #{incident_id} is already resolved"
+        )
+        
+    incident.status = "RESOLVED"
+    incident.end_time = datetime.now(timezone.utc)
+    incident.resolved_by = admin_user.email
+    
+    db.commit()
+    db.refresh(incident)
+    return incident
 
 @router.get("/users", response_model=List[UserAdminResponse])
 def get_all_users(db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
