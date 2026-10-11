@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  ShieldAlert, 
-  Download, 
+  ShieldCheck, 
   Sun, 
   Moon, 
   Menu, 
@@ -12,8 +11,8 @@ import {
   LayoutDashboard, 
   Users, 
   BookOpen, 
-  UserCheck,
-  LogIn
+  LogIn,
+  Smartphone
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -64,48 +63,45 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="site-header sticky top-0 z-40 bg-[var(--color-bg-base)]/95 backdrop-blur-md border-b border-[var(--color-border)]">
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-30 bg-[var(--bg-base)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-4">
           
           {/* Logo & Brand */}
           <button 
             onClick={() => handleLinkClick('dashboard')}
-            className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer" 
+            className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer shrink-0" 
             aria-label="SafeHer Dashboard"
           >
-            <div className="w-8 h-8 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] p-1 flex items-center justify-center shadow-sm group-hover:border-[var(--color-primary)] transition-colors shrink-0 overflow-hidden" style={{ width: '32px', height: '32px' }}>
+            <div className="w-8 h-8 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-medium)] p-1 flex items-center justify-center shadow-xs group-hover:border-[var(--brand-primary)] transition-colors shrink-0">
               <img 
                 src="/logo.png" 
                 alt="SafeHer Logo" 
-                width={24}
-                height={24}
-                style={{ width: '24px', height: '24px', maxWidth: '24px', maxHeight: '24px' }}
                 className="w-full h-full rounded-lg object-cover" 
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }} 
               />
-              <ShieldAlert className="w-5 h-5 text-[var(--color-primary)]" style={{ display: 'none' }} />
+              <ShieldCheck className="w-5 h-5 text-[var(--brand-primary)]" style={{ display: 'none' }} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight text-[var(--color-text-primary)]">SafeHer</span>
-              <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-[var(--color-surface-elevated)] border border-[var(--color-border)] text-[var(--color-text-secondary)]">
+              <span className="font-extrabold text-base tracking-tight text-[var(--text-primary)]">SafeHer</span>
+              <span className="hidden sm:inline-block text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
                 Companion
               </span>
             </div>
           </button>
 
-          {/* Desktop Navigation Links */}
+          {/* Desktop Navigation Links (Centered) */}
           <nav className="hidden md:flex items-center gap-1.5" aria-label="Main Navigation">
             {navLinks.map((link) => (
               <button 
                 key={link.label} 
                 onClick={() => handleLinkClick(link.view)} 
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   currentView === link.view 
-                    ? 'bg-[var(--color-primary)] text-white shadow-sm' 
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-elevated)]'
+                    ? 'bg-[var(--brand-primary)] text-white shadow-xs' 
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
                 }`}
               >
                 {link.icon}
@@ -115,79 +111,79 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Right Action Bar */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             
-            {/* Theme Toggle */}
+            {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-text-primary)] transition-all cursor-pointer"
+              className="p-2 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] transition-all cursor-pointer"
               aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-              title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              title={isDark ? "Switch to Warm Ivory" : "Switch to Dark Wine"}
             >
               {isDark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
-            {/* Small Unobtrusive Download App Button */}
+            {/* Small Unobtrusive APK Download Button */}
             <a
               href={APP_CONFIG.apkDownloadUrl}
               download={APP_CONFIG.apkFilename}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-surface-elevated)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-text-primary)] text-xs font-semibold transition-all shadow-sm"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-medium)] text-[var(--text-primary)] text-xs font-semibold transition-all shrink-0"
               title="Download SafeHer Android APK"
             >
-              <Download size={13} className="text-[var(--color-primary)]" />
-              <span>Download App</span>
+              <Smartphone size={13} className="text-[var(--brand-primary)]" />
+              <span>Android APK</span>
             </a>
 
-            {/* Account / Guest Control */}
+            {/* Account / Authentication State */}
             {user ? (
               <div className="relative">
                 <button 
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-all cursor-pointer"
+                  className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] transition-all cursor-pointer"
                   aria-label="User Account Menu"
                 >
                   {user.photoURL ? (
                     <img src={user.photoURL} alt={user.displayName || 'User'} className="w-5 h-5 rounded-full object-cover" />
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] text-white text-[10px] font-bold flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-[var(--brand-primary)] text-white text-[10px] font-bold flex items-center justify-center">
                       {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
-                  <span className="text-xs font-semibold text-[var(--color-text-primary)] hidden md:inline max-w-[100px] truncate">
+                  <span className="text-xs font-semibold text-[var(--text-primary)] hidden md:inline max-w-[100px] truncate">
                     {user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Account'}
                   </span>
-                  <ChevronDown size={13} className="text-[var(--color-text-muted)]" />
+                  <ChevronDown size={13} className="text-[var(--text-muted)]" />
                 </button>
 
                 {/* Dropdown Menu */}
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-52 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-xl z-50 text-xs">
-                    <div className="px-3 py-2 border-b border-[var(--color-border)]">
-                      <p className="font-semibold text-[var(--color-text-primary)] truncate">
+                  <div className="absolute right-0 mt-2 w-52 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-medium)] rounded-2xl shadow-[var(--shadow-elevated)] z-50 text-xs">
+                    <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
+                      <p className="font-semibold text-[var(--text-primary)] truncate">
                         {user.displayName || 'SafeHer User'}
                       </p>
-                      <p className="text-[11px] text-[var(--color-text-muted)] truncate">
+                      <p className="text-[11px] text-[var(--text-muted)] truncate font-mono">
                         {user.email}
                       </p>
                     </div>
 
                     <button 
                       onClick={() => handleLinkClick('profile')}
-                      className="w-full px-3 py-2 text-left text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
+                      className="w-full px-3 py-2 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <UserIcon size={14} />
-                      <span>Profile</span>
+                      <span>Profile & Medical</span>
                     </button>
 
                     <button 
                       onClick={() => handleLinkClick('contacts')}
-                      className="w-full px-3 py-2 text-left text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
+                      className="w-full px-3 py-2 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Users size={14} />
                       <span>Emergency Contacts</span>
                     </button>
 
-                    <div className="border-t border-[var(--color-border)] my-1"></div>
+                    <div className="border-t border-[var(--border-subtle)] my-1"></div>
 
                     <button 
                       onClick={handleSignOut}
@@ -200,14 +196,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </div>
             ) : isGuest ? (
-              <div className="flex items-center gap-1.5">
-                <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  <UserCheck size={11} />
+              <div className="flex items-center gap-2">
+                <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                   <span>Guest</span>
                 </span>
                 <button
                   onClick={onOpenAccountModal}
-                  className="px-3 py-1.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
                 >
                   <LogIn size={13} />
                   <span>Sign In</span>
@@ -216,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={onOpenAccountModal}
-                className="px-3 py-1.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
                 <LogIn size={13} />
                 <span>Sign In</span>
@@ -226,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] cursor-pointer"
+              className="md:hidden p-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] cursor-pointer"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -237,15 +232,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[var(--color-border)] py-3 px-1 space-y-1">
+          <div className="md:hidden border-t border-[var(--border-subtle)] py-3 px-1 space-y-1 bg-[var(--bg-base)]">
             {navLinks.map((link) => (
               <button
                 key={link.label}
                 onClick={() => handleLinkClick(link.view)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   currentView === link.view
-                    ? 'bg-[var(--color-primary)] text-white'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-elevated)]'
+                    ? 'bg-[var(--brand-primary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
                 }`}
               >
                 {link.icon}
@@ -253,36 +248,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             ))}
 
-            <div className="border-t border-[var(--color-border)] pt-2 mt-2 flex flex-col gap-2">
-              <a
-                href={APP_CONFIG.apkDownloadUrl}
-                download={APP_CONFIG.apkFilename}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-text-primary)]"
-              >
-                <Download size={14} className="text-[var(--color-primary)]" />
-                <span>Download Android APK</span>
-              </a>
+            <a
+              href={APP_CONFIG.apkDownloadUrl}
+              download={APP_CONFIG.apkFilename}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
+            >
+              <Smartphone size={14} className="text-[var(--brand-primary)]" />
+              <span>Download Android APK</span>
+            </a>
 
-              {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 bg-red-500/10 cursor-pointer"
-                >
-                  <LogOut size={14} />
-                  <span>Sign Out</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenAccountModal();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold bg-[var(--color-primary)] text-white cursor-pointer"
-                >
-                  <span>Sign In / Create Account</span>
-                </button>
-              )}
-            </div>
+            {user && (
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+              >
+                <LogOut size={14} />
+                <span>Sign Out ({user.email})</span>
+              </button>
+            )}
           </div>
         )}
 

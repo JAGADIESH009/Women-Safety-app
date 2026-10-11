@@ -39,12 +39,12 @@ export const AppContent: React.FC = () => {
 
       if (!hash || hash === 'welcome') {
         // Root visit or explicit welcome hash
-        if (user || isGuest) {
-          // Returning authenticated user or active guest session -> Go directly to Dashboard
+        if (user) {
+          // Returning authenticated user -> Go directly to Dashboard
           setCurrentView('dashboard');
           window.location.hash = 'dashboard';
         } else {
-          // New visitor or signed out -> Show Welcome / Authentication screen
+          // First-visit or unauthenticated visitor -> Always show Welcome / Authentication screen
           setCurrentView('welcome');
         }
       } else if (validAppViews.includes(hash as PageView)) {

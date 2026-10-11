@@ -18,8 +18,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('safeher_theme') as ThemeMode | null;
     if (saved === 'light' || saved === 'dark') return saved;
-    // Default to dark as SafeHer signature aesthetic
-    return 'dark';
+    // Default to light (warm ivory / restrained burgundy) as requested
+    return 'light';
   });
 
   useEffect(() => {

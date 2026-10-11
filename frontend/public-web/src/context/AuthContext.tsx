@@ -32,7 +32,7 @@ interface AuthContextType {
   isFirebaseAvailable: boolean;
 }
 
-const GUEST_STORAGE_KEY = 'safeher_guest_mode_active';
+const GUEST_STORAGE_KEY = 'safeher_guest_session_active';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isGuest, setIsGuest] = useState<boolean>(() => {
-    return localStorage.getItem(GUEST_STORAGE_KEY) === 'true';
+    return sessionStorage.getItem(GUEST_STORAGE_KEY) === 'true';
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -362,6 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setProfile(null);
       setIsGuest(false);
+      sessionStorage.removeItem(GUEST_STORAGE_KEY);
       localStorage.removeItem(GUEST_STORAGE_KEY);
       setAuthSuccess('Signed out successfully.');
     } catch (err) {
@@ -371,7 +372,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const continueAsGuest = () => {
     setIsGuest(true);
-    localStorage.setItem(GUEST_STORAGE_KEY, 'true');
+    sessionStorage.setItem(GUEST_STORAGE_KEY, 'true');
     setUser(null);
     setProfile(null);
     setAuthError(null);
