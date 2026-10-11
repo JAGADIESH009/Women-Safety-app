@@ -140,6 +140,25 @@
         .btn-resolve:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); }
         .btn-resolve:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
+        .btn-resolve-all {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.28));
+            color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4);
+            padding: 0.42rem 0.9rem; border-radius: 6px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            transition: all 0.2s ease;
+        }
+        .btn-resolve-all:hover:not(:disabled) {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff; border-color: transparent;
+            transform: translateY(-1px); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+        }
+        .btn-resolve-all:disabled {
+            opacity: 0.45; cursor: not-allowed; transform: none;
+            box-shadow: none; border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03); color: var(--text-muted);
+        }
+
         .btn-view {
             background: rgba(139, 92, 246, 0.15); color: #c4b5fd;
             border: 1px solid rgba(139, 92, 246, 0.3); padding: 0.42rem 0.85rem;
@@ -302,8 +321,11 @@
                             <option value="RESOLVED">Resolved</option>
                         </select>
                     </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                         <span id="incidentCountBadge" style="font-size: 0.85rem; color: var(--text-muted);">Showing 0 incidents</span>
+                        <button class="btn-resolve-all" id="resolveAllBtn" onclick="openResolveAllModal()" disabled title="No unresolved incidents">
+                            ✓✓ Resolve All (0)
+                        </button>
                         <button class="btn-small" onclick="fetchIncidents(true)" id="refreshIncidentsBtn">↻ Refresh</button>
                     </div>
                 </div>
@@ -401,6 +423,38 @@
                     <button class="btn-small" onclick="closeResolveModal()" id="cancelResolveBtn">Cancel</button>
                     <button class="btn-resolve" onclick="executeResolveIncident()" id="confirmResolveBtn">
                         Confirm Resolution
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resolve All Incidents Confirmation Modal -->
+        <div id="resolveAllModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 520px;">
+                <div class="modal-header">
+                    <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--success);">✓✓</span> Bulk Resolve Incidents
+                    </h2>
+                    <button class="close-btn" onclick="closeResolveAllModal()">&times;</button>
+                </div>
+                <div style="margin: 1.25rem 0;">
+                    <p style="font-size: 1rem; color: var(--text-main); margin-bottom: 0.75rem; line-height: 1.5;">
+                        Are you sure you want to mark <strong id="bulkResolveCountText" style="color: var(--accent-primary);">0</strong> unresolved incident(s) as <span class="status-badge status-RESOLVED" style="padding: 0.15rem 0.5rem; font-size: 0.78rem;">RESOLVED</span>?
+                    </p>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.95rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                        <div>• <strong>Scope:</strong> Resolves <em>ALL</em> currently unresolved incidents in the database, not just those visible under current search filters.</div>
+                        <div>• <strong>Audit Record:</strong> Sets status to RESOLVED, saves resolution timestamp, and logs resolving admin (<strong id="bulkResolveAdminEmail" style="color: var(--text-main);">admin</strong>).</div>
+                        <div>• <strong>History Safe:</strong> Retains all SOS messages, victim details, and GPS coordinates. Previously resolved incidents are untouched.</div>
+                        <div style="margin-top: 0.5rem; color: #f59e0b; font-size: 0.8rem;">
+                            ⚠️ <em>Note: This action updates system incident records and does not dispatch emergency services or contact emergency contacts.</em>
+                        </div>
+                    </div>
+                </div>
+                <div id="resolveAllModalError" class="error-msg" style="text-align: left;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button class="btn-small" onclick="closeResolveAllModal()" id="cancelResolveAllBtn">Cancel</button>
+                    <button class="btn-resolve" onclick="executeResolveAllIncidents()" id="confirmResolveAllBtn" style="padding: 0.55rem 1.25rem;">
+                        Confirm Bulk Resolution
                     </button>
                 </div>
             </div>
@@ -908,6 +962,7 @@
 
             renderMapMarkers(filtered);
             renderIncidentList(filtered);
+            updateResolveAllButtonState();
         }
 
         function getMarkerColor(status) {
@@ -1397,6 +1452,9 @@
                 // Update UI list and map with the latest status
                 applyFilters();
 
+                // Update Resolve All button count and state
+                updateResolveAllButtonState();
+
                 // If incident detail modal is currently open for this incident, update it in place
                 if (activeModalIncidentId === resolvedId) {
                     renderIncidentDetailContent(data);
@@ -1407,6 +1465,99 @@
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Confirm Resolution";
+            }
+        }
+
+        // --- Resolve All Logic ---
+        function updateResolveAllButtonState() {
+            const btn = document.getElementById('resolveAllBtn');
+            if (!btn) return;
+            const unresolvedCount = allIncidents.filter(i => (i.status || '').toUpperCase() !== 'RESOLVED').length;
+            if (unresolvedCount === 0) {
+                btn.disabled = true;
+                btn.title = "No unresolved incidents in system";
+                btn.innerHTML = "✓ All Resolved (0)";
+            } else {
+                btn.disabled = false;
+                btn.title = `Resolve all ${unresolvedCount} active / unresolved incident(s)`;
+                btn.innerHTML = `✓✓ Resolve All (${unresolvedCount})`;
+            }
+        }
+
+        function openResolveAllModal() {
+            const unresolvedCount = allIncidents.filter(i => (i.status || '').toUpperCase() !== 'RESOLVED').length;
+            if (unresolvedCount === 0) {
+                showToast("No unresolved incidents to resolve", "info");
+                return;
+            }
+            const modal = document.getElementById('resolveAllModal');
+            const countEl = document.getElementById('bulkResolveCountText');
+            const adminEmail = document.getElementById('bulkResolveAdminEmail');
+            const errEl = document.getElementById('resolveAllModalError');
+            const confirmBtn = document.getElementById('confirmResolveAllBtn');
+            const cancelBtn = document.getElementById('cancelResolveAllBtn');
+
+            countEl.innerText = `${unresolvedCount}`;
+            adminEmail.innerText = currentAdmin?.email || (currentAdmin?.admin_id ? `${currentAdmin.admin_id} (Admin)` : 'Authenticated Admin');
+            errEl.innerText = '';
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = `Confirm Bulk Resolution (${unresolvedCount})`;
+            cancelBtn.disabled = false;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeResolveAllModal() {
+            document.getElementById('resolveAllModal').classList.add('hidden');
+        }
+
+        async function executeResolveAllIncidents() {
+            const token = localStorage.getItem('adminToken');
+            const confirmBtn = document.getElementById('confirmResolveAllBtn');
+            const cancelBtn = document.getElementById('cancelResolveAllBtn');
+            const errEl = document.getElementById('resolveAllModalError');
+
+            confirmBtn.disabled = true;
+            confirmBtn.innerText = "Resolving All Incidents...";
+            cancelBtn.disabled = true;
+            errEl.innerText = "";
+
+            try {
+                const res = await fetch(`${API_URL}/admin/incidents/resolve-all`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || `Failed to resolve incidents (HTTP ${res.status})`);
+                }
+
+                closeResolveAllModal();
+                showToast(`Bulk resolution complete: ${data.resolved_count} incident(s) resolved!`, 'success');
+
+                // Immediately refresh all incidents from backend
+                await fetchIncidents(false, token);
+
+                // Immediately refresh dashboard stats from backend
+                await loadDashboardStats(token);
+
+                // If incident detail modal is currently open, refresh its content
+                if (activeModalIncidentId) {
+                    const updated = allIncidents.find(i => i.id === activeModalIncidentId);
+                    if (updated) {
+                        renderIncidentDetailContent(updated);
+                    }
+                }
+            } catch (err) {
+                errEl.innerText = err.message;
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = "Confirm Bulk Resolution";
+                cancelBtn.disabled = false;
             }
         }
 
@@ -1438,7 +1589,9 @@
         // --- Keyboard and Backdrop Dismissal ---
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (!document.getElementById('resolveConfirmModal').classList.contains('hidden')) {
+                if (!document.getElementById('resolveAllModal').classList.contains('hidden')) {
+                    closeResolveAllModal();
+                } else if (!document.getElementById('resolveConfirmModal').classList.contains('hidden')) {
                     closeResolveModal();
                 } else if (!document.getElementById('incidentModal').classList.contains('hidden')) {
                     closeIncidentModal();
@@ -1454,6 +1607,9 @@
         });
         document.getElementById('resolveConfirmModal')?.addEventListener('click', (e) => {
             if (e.target.id === 'resolveConfirmModal') closeResolveModal();
+        });
+        document.getElementById('resolveAllModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'resolveAllModal') closeResolveAllModal();
         });
         document.getElementById('userModal')?.addEventListener('click', (e) => {
             if (e.target.id === 'userModal') document.getElementById('userModal').classList.add('hidden');

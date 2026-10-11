@@ -46,3 +46,10 @@ class AdminDashboardResponse(BaseModel):
     resolved_incidents: int
     registration_trends: List[RegistrationTrend]
     recent_incidents: List[IncidentAdminResponse]
+
+class BulkResolveIncidentsResponse(BaseModel):
+    message: str
+    resolved_count: int
+    unresolved_remaining: int
+    timestamp: datetime
+

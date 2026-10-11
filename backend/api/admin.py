@@ -6,7 +6,7 @@ import os
 
 from database.models import User, Incident
 from api.deps import get_db, get_current_user
-from schemas.admin_schemas import AdminDashboardResponse, RegistrationTrend, IncidentAdminResponse, UserAdminResponse, UserDetailsAdminResponse
+from schemas.admin_schemas import AdminDashboardResponse, RegistrationTrend, IncidentAdminResponse, UserAdminResponse, UserDetailsAdminResponse, BulkResolveIncidentsResponse
 from typing import List
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -107,6 +107,44 @@ def get_all_incidents(db: Session = Depends(get_db), admin_user: AdminUser = Dep
         .all()
     )
     return incidents
+
+@router.put("/incidents/resolve-all", response_model=BulkResolveIncidentsResponse)
+@router.post("/incidents/resolve-all", response_model=BulkResolveIncidentsResponse)
+def resolve_all_incidents(db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):
+    """
+    Marks all currently unresolved incidents as RESOLVED within a single database transaction.
+    Records the resolution timestamp and the authenticated resolving admin for each.
+    Excludes already resolved incidents to preserve their original resolution metadata.
+    """
+    try:
+        unresolved_incidents = (
+            db.query(Incident)
+            .filter((Incident.status != "RESOLVED") | (Incident.status.is_(None)))
+            .all()
+        )
+        
+        now = datetime.now(timezone.utc)
+        resolved_count = 0
+        for incident in unresolved_incidents:
+            incident.status = "RESOLVED"
+            incident.end_time = now
+            incident.resolved_by = admin_user.email
+            resolved_count += 1
+            
+        db.commit()
+        
+        return BulkResolveIncidentsResponse(
+            message=f"Successfully resolved {resolved_count} incident(s)" if resolved_count > 0 else "No unresolved incidents to resolve",
+            resolved_count=resolved_count,
+            unresolved_remaining=0,
+            timestamp=now
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to bulk resolve incidents: {str(e)}"
+        )
 
 @router.get("/incidents/{incident_id}", response_model=IncidentAdminResponse)
 def get_incident_by_id(incident_id: int, db: Session = Depends(get_db), admin_user: AdminUser = Depends(verify_admin)):

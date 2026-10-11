@@ -220,3 +220,70 @@ def test_prevent_duplicate_resolution():
     assert detail["status"] == "RESOLVED"
     assert detail["resolved_by"] == "admin@safeher.org"
     assert detail["end_time"] is not None
+
+def test_resolve_all_unauthorized():
+    response = client.post("/admin/incidents/resolve-all")
+    assert response.status_code == 401
+    put_response = client.put("/admin/incidents/resolve-all")
+    assert put_response.status_code == 401
+
+def test_resolve_all_with_unresolved_incidents():
+    from database.models import Incident
+    db = TestingSessionLocal()
+    try:
+        # Save incident 1's original resolution timestamp
+        inc1 = db.query(Incident).filter(Incident.id == 1).first()
+        orig_inc1_endtime = inc1.end_time
+        orig_inc1_resolved_by = inc1.resolved_by
+
+        # Add 2 new unresolved incidents
+        inc2 = Incident(user_id=1, type="Harassment Alert", status="ACTIVE")
+        inc3 = Incident(user_id=1, type="Medical Emergency", status="IN_PROGRESS")
+        db.add_all([inc2, inc3])
+        db.commit()
+        db.refresh(inc2)
+        db.refresh(inc3)
+        inc2_id = inc2.id
+        inc3_id = inc3.id
+    finally:
+        db.close()
+
+    headers = get_admin_headers()
+    response = client.post("/admin/incidents/resolve-all", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["resolved_count"] == 2
+    assert data["unresolved_remaining"] == 0
+    assert "Successfully resolved 2 incident(s)" in data["message"]
+
+    # Verify newly resolved incidents
+    db = TestingSessionLocal()
+    try:
+        check2 = db.query(Incident).filter(Incident.id == inc2_id).first()
+        check3 = db.query(Incident).filter(Incident.id == inc3_id).first()
+        assert check2.status == "RESOLVED"
+        assert check2.resolved_by == "admin@safeher.org"
+        assert check2.end_time is not None
+
+        assert check3.status == "RESOLVED"
+        assert check3.resolved_by == "admin@safeher.org"
+        assert check3.end_time is not None
+
+        # Verify previously resolved incident 1 was preserved untouched
+        check1 = db.query(Incident).filter(Incident.id == 1).first()
+        assert check1.status == "RESOLVED"
+        assert check1.end_time == orig_inc1_endtime
+        assert check1.resolved_by == orig_inc1_resolved_by
+    finally:
+        db.close()
+
+def test_resolve_all_when_none_unresolved():
+    headers = get_admin_headers()
+    # Call resolve-all when 0 incidents are unresolved
+    response = client.post("/admin/incidents/resolve-all", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["resolved_count"] == 0
+    assert data["unresolved_remaining"] == 0
+    assert "No unresolved incidents" in data["message"]
+
