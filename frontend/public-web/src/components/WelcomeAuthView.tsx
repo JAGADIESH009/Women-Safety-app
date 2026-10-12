@@ -10,10 +10,9 @@ import {
   ArrowRight, 
   AlertCircle, 
   CheckCircle2, 
-  Compass,
-  Sun,
-  Moon,
-  Smartphone
+  Sun, 
+  Moon, 
+  Smartphone 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -109,103 +108,92 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col justify-between selection:bg-[var(--brand-primary)] selection:text-white">
       
-      {/* Top Header Navigation Bar: Minimal & Restrained */}
+      {/* Top Header: Slim & Minimal */}
       <header className="w-full border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           
-          {/* Logo & Brand Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-medium)] p-1 flex items-center justify-center shrink-0">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-medium)] p-1 flex items-center justify-center shrink-0">
               <img 
                 src="/logo.png" 
-                alt="SafeHer Logo" 
-                className="w-full h-full object-cover rounded-lg"
+                alt="SafeHer" 
+                className="w-full h-full object-cover rounded"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
               <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)]" style={{ display: 'none' }} />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">SafeHer</span>
-              <span className="text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
-                Companion
-              </span>
-            </div>
+            <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">SafeHer</span>
           </div>
 
-          {/* Right Header Utilities: APK Download & Theme Toggle */}
-          <div className="flex items-center gap-2.5">
+          {/* Right Controls */}
+          <div className="flex items-center gap-2">
             <a
               href={APP_CONFIG.apkDownloadUrl}
               download={APP_CONFIG.apkFilename}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-medium)] transition-all shrink-0 cursor-pointer"
-              title="Download SafeHer Android App APK"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] transition-colors cursor-pointer"
+              title="Download Android APK"
             >
-              <Smartphone size={13} className="text-[var(--brand-primary)]" />
-              <span className="hidden sm:inline">Android APK</span>
-              <span className="sm:hidden">App</span>
+              <Smartphone size={12} className="text-[var(--brand-primary)]" />
+              <span>Android APK</span>
             </a>
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] transition-all cursor-pointer"
+              className="p-1.5 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] transition-colors cursor-pointer"
               aria-label="Toggle visual theme"
-              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
             >
-              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
           </div>
 
         </div>
       </header>
 
-      {/* Main Content: Linear-style Center-Stage Authentication Canvas */}
-      <main className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6">
-        <div className="w-full max-w-md mx-auto space-y-6">
+      {/* Main Focus: Simplified, Human-Centric Authentication */}
+      <main className="flex-1 flex flex-col items-center justify-center py-10 px-4 sm:px-6">
+        <div className="w-full max-w-sm mx-auto space-y-5">
 
-          {/* Context Badge & Clean Hero Heading */}
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--brand-subtle)] border border-[var(--brand-border)] text-[11px] font-medium text-[var(--brand-primary)]">
-              <ShieldCheck size={12} />
-              <span>Personal Safety Network</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+          {/* Clean Heading */}
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
               {activeTab === 'signin' && 'Sign in to SafeHer'}
-              {activeTab === 'register' && 'Create your account'}
-              {activeTab === 'forgot' && 'Reset your password'}
+              {activeTab === 'register' && 'Create an account'}
+              {activeTab === 'forgot' && 'Reset password'}
             </h1>
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">
-              {activeTab === 'signin' && 'Access synchronized emergency contacts and trusted safety networks.'}
-              {activeTab === 'register' && 'Connect your account to synchronize contacts with the Android mobile app.'}
-              {activeTab === 'forgot' && 'Enter your email to receive secure password recovery instructions.'}
+            <p className="text-xs text-[var(--text-secondary)]">
+              {activeTab === 'signin' && 'Access synchronized contacts and verified safety helplines.'}
+              {activeTab === 'register' && 'Set up your cloud safety circle across mobile and web.'}
+              {activeTab === 'forgot' && 'Enter your email to receive recovery instructions.'}
             </p>
           </div>
 
-          {/* Minimalist Card Container: 1px hairline border, subtle elevation */}
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-medium)] rounded-2xl p-6 sm:p-7 shadow-[var(--shadow-card)] space-y-5">
+          {/* Focused Auth Card */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
             
-            {/* Feedback Notices */}
+            {/* Feedback Notifications */}
             {(validationError || authError) && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-start gap-2.5">
-                <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                <span className="leading-snug">{validationError || authError}</span>
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <span>{validationError || authError}</span>
               </div>
             )}
 
             {authSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-start gap-2.5">
-                <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
-                <span className="leading-snug">{authSuccess}</span>
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-start gap-2">
+                <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
+                <span>{authSuccess}</span>
               </div>
             )}
 
-            {/* Primary Action 1: Continue with Google */}
+            {/* Google Authentication */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] border border-[var(--border-medium)] hover:border-[var(--brand-primary)] text-[var(--text-primary)] font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-3 shadow-xs hover:shadow-sm active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] text-[var(--text-primary)] font-medium text-xs transition-colors flex items-center justify-center gap-2.5 shadow-2xs disabled:opacity-60 cursor-pointer"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path
@@ -233,19 +221,19 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[var(--border-subtle)]"></div>
               </div>
-              <span className="relative bg-[var(--bg-surface)] px-3 text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-medium">
-                or continue with email
+              <span className="relative bg-[var(--bg-surface)] px-2.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-medium">
+                or email
               </span>
             </div>
 
-            {/* Tab Switcher: Segmented Control */}
-            <div className="flex p-1 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
+            {/* Segmented Tab Bar */}
+            <div className="flex p-0.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
               <button
                 type="button"
                 onClick={() => handleTabChange('signin')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
                   activeTab === 'signin'
-                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs font-semibold'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-2xs font-semibold'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
@@ -254,61 +242,50 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
               <button
                 type="button"
                 onClick={() => handleTabChange('register')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
                   activeTab === 'register'
-                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs font-semibold'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-2xs font-semibold'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 Register
               </button>
-              <button
-                type="button"
-                onClick={() => handleTabChange('forgot')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                  activeTab === 'forgot'
-                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs font-semibold'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                Reset
-              </button>
             </div>
 
-            {/* Form Body */}
-            <form onSubmit={handleEmailSubmit} className="space-y-3.5">
+            {/* Form Fields */}
+            <form onSubmit={handleEmailSubmit} className="space-y-3">
               
               {activeTab === 'register' && (
                 <>
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">
                       Full Name
                     </label>
                     <div className="relative">
-                      <User size={14} className="absolute left-3.5 top-3 text-[var(--text-muted)]" />
+                      <User size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Maya Sharma"
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all"
+                        placeholder="Your full name"
+                        className="w-full pl-8 pr-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors"
                         required={activeTab === 'register'}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">
                       Phone Number <span className="font-normal text-[var(--text-muted)]">(Optional)</span>
                     </label>
                     <div className="relative">
-                      <Phone size={14} className="absolute left-3.5 top-3 text-[var(--text-muted)]" />
+                      <Phone size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
                       <input
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="+91 98765 43210"
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all font-mono"
+                        className="w-full pl-8 pr-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors font-mono"
                       />
                     </div>
                   </div>
@@ -316,17 +293,17 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
               )}
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail size={14} className="absolute left-3.5 top-3 text-[var(--text-muted)]" />
+                  <Mail size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors"
                     required
                   />
                 </div>
@@ -335,37 +312,37 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
               {activeTab !== 'forgot' && (
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                    <label className="block text-[11px] font-medium text-[var(--text-secondary)]">
                       Password
                     </label>
                     {activeTab === 'signin' && (
                       <button
                         type="button"
                         onClick={() => handleTabChange('forgot')}
-                        className="text-[11px] text-[var(--brand-primary)] hover:underline font-medium cursor-pointer"
+                        className="text-[10px] text-[var(--brand-primary)] hover:underline font-medium cursor-pointer"
                       >
-                        Forgot password?
+                        Forgot?
                       </button>
                     )}
                   </div>
                   <div className="relative">
-                    <Lock size={14} className="absolute left-3.5 top-3 text-[var(--text-muted)]" />
+                    <Lock size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all font-mono"
+                      className="w-full pl-8 pr-8 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors font-mono"
                       required
                       minLength={6}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                      className="absolute right-2.5 top-2.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
                   </div>
                 </div>
@@ -373,17 +350,17 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
 
               {activeTab === 'register' && (
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <Lock size={14} className="absolute left-3.5 top-3 text-[var(--text-muted)]" />
+                    <Lock size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all font-mono"
+                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors font-mono"
                       required
                       minLength={6}
                     />
@@ -391,58 +368,55 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
                 </div>
               )}
 
-              {/* Primary Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full pt-2.5 pb-2.5 px-4 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs disabled:opacity-60 cursor-pointer"
               >
                 {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                 ) : (
                   <>
                     <span>
                       {activeTab === 'signin' && 'Sign In'}
                       {activeTab === 'register' && 'Create Account'}
-                      {activeTab === 'forgot' && 'Send Password Reset Link'}
+                      {activeTab === 'forgot' && 'Send Reset Link'}
                     </span>
-                    <ArrowRight size={14} />
+                    <ArrowRight size={13} />
                   </>
                 )}
               </button>
+
+              {activeTab === 'forgot' && (
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('signin')}
+                  className="w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] pt-1 cursor-pointer"
+                >
+                  Back to sign in
+                </button>
+              )}
             </form>
 
-            {/* Guest Action: Clean & Subdued */}
-            <div className="pt-3 border-t border-[var(--border-subtle)] text-center space-y-1.5">
+            {/* Minimal Guest Access Link */}
+            <div className="pt-2 border-t border-[var(--border-subtle)] text-center">
               <button
                 type="button"
                 onClick={handleGuestEntry}
-                className="w-full py-2 px-3 rounded-xl hover:bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="text-xs text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors font-medium inline-flex items-center gap-1 cursor-pointer"
               >
-                <Compass size={13} className="text-[var(--brand-primary)]" />
-                <span>Continue as Guest to View Public Helplines</span>
+                <span>Continue as guest</span>
+                <ArrowRight size={11} />
               </button>
             </div>
 
           </div>
 
-          {/* Micro Trust Seals: Subtle and Informative */}
-          <div className="flex items-center justify-center gap-4 text-[11px] text-[var(--text-muted)] text-center">
-            <span className="inline-flex items-center gap-1">
-              <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
-              <span>TLS Encrypted</span>
-            </span>
-            <span>•</span>
-            <span>Zero Background Tracking</span>
-            <span>•</span>
-            <span>Android APK Sync</span>
-          </div>
-
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full py-4 px-4 text-center text-[11px] text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
+      {/* Slim Footer */}
+      <footer className="w-full py-3 px-4 text-center text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
         SafeHer Cloud Companion • Auxiliary Emergency Support Platform
       </footer>
 

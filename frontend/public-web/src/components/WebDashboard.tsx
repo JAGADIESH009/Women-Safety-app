@@ -11,11 +11,13 @@ import {
   AlertCircle,
   BookOpen,
   User as UserIcon,
-  ShieldAlert
+  ShieldAlert,
+  Radio
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { APP_CONFIG } from '../config/appConfig';
+import { SafetyMap } from './SafetyMap';
 import type { EmergencyContact, PageView } from '../types';
 
 interface WebDashboardProps {
@@ -72,12 +74,12 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 animate-fade-in">
       
-      {/* 1. COMPACT PAGE HEADING (No bulky outer container) */}
+      {/* 1. COMPACT PAGE HEADING (Your safety, at a glance) */}
       <section className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-              {user ? `Welcome, ${displayName}` : 'Your safety, connected.'}
+              Your safety, at a glance
             </h1>
             {!user ? (
               <span className="text-[10px] font-medium text-[var(--text-muted)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)]/60">
@@ -86,14 +88,12 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
             ) : (
               <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Synced</span>
+                <span>Synced ({displayName})</span>
               </span>
             )}
           </div>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
-            {user 
-              ? 'Emergency contacts and telemetry synchronized across the SafeHer cloud network.'
-              : 'Direct access to national emergency responders and field safety protocols.'}
+            Real-time verified location, direct emergency responders, and official safety helplines.
           </p>
         </div>
 
@@ -119,25 +119,54 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
         )}
       </section>
 
-      {/* 2. COMPACT CONTACT SYNCHRONIZATION NOTICE (Guest Only) */}
-      {!user && (
-        <section className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-          <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-            <Users size={14} className="text-[var(--brand-primary)] shrink-0" />
-            <span>Sign in to store emergency contacts and sync them with the SafeHer Android app.</span>
+      {/* 2. PROMINENT BUT TASTEFUL EMERGENCY ACTION (Honest direct-dial action) */}
+      <section className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-surface)] border border-red-500/25 dark:border-red-500/35 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-center shrink-0">
+            <Radio size={16} className="animate-pulse" />
           </div>
-          <button
-            onClick={onOpenAccountModal}
-            className="text-xs font-semibold text-[var(--brand-primary)] hover:underline inline-flex items-center gap-1 shrink-0 self-start sm:self-auto cursor-pointer"
-          >
-            <span>Sign in to sync contacts</span>
-            <ArrowRight size={12} />
-          </button>
-        </section>
-      )}
+          <div>
+            <div className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <span>Direct Emergency Dispatch</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/10 text-red-600 dark:text-red-400 font-semibold">
+                Toll-Free 24/7
+              </span>
+            </div>
+            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+              Immediate connection to national police, medical, and fire emergency authority.
+            </p>
+          </div>
+        </div>
 
-      {/* 3. EMERGENCY HELPLINES (Primary Hero Section - Immediately Scannable) */}
-      <section className="space-y-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="tel:112"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs active:scale-[0.98]"
+          >
+            <PhoneCall size={14} />
+            <span>Call 112 Immediately</span>
+          </a>
+
+          {user && primaryContact && (
+            <a
+              href={`tel:${primaryContact.phone}`}
+              className="hidden sm:inline-flex px-3 py-2 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium text-xs items-center gap-1.5 transition-colors"
+              title={`Call primary contact: ${primaryContact.name}`}
+            >
+              <Phone size={13} className="text-[var(--brand-primary)]" />
+              <span>Call {primaryContact.name.split(' ')[0]}</span>
+            </a>
+          )}
+        </div>
+      </section>
+
+      {/* 3. INTERACTIVE LOCATION & SURROUNDINGS MAP */}
+      <section>
+        <SafetyMap />
+      </section>
+
+      {/* 4. EMERGENCY HELPLINES (Compact Secondary Section) */}
+      <section className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldAlert size={14} className="text-[var(--brand-primary)]" />
@@ -177,8 +206,22 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
         </div>
       </section>
 
-      {/* 4. EMERGENCY CONTACTS (Authenticated Users) */}
-      {user && (
+      {/* 5. GUEST INLINE SYNC NOTICE OR AUTHENTICATED CONTACTS CIRCLE */}
+      {!user ? (
+        <section className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="flex items-center gap-2 text-[var(--text-secondary)]">
+            <Users size={14} className="text-[var(--brand-primary)] shrink-0" />
+            <span>Sign in to store emergency contacts and sync them with the SafeHer Android app.</span>
+          </div>
+          <button
+            onClick={onOpenAccountModal}
+            className="text-xs font-semibold text-[var(--brand-primary)] hover:underline inline-flex items-center gap-1 shrink-0 self-start sm:self-auto cursor-pointer"
+          >
+            <span>Sign in to sync contacts</span>
+            <ArrowRight size={12} />
+          </button>
+        </section>
+      ) : (
         <section className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -287,7 +330,7 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
         </section>
       )}
 
-      {/* 5. ESSENTIAL NAVIGATION & ANDROID COMPANION STRIP */}
+      {/* 6. ESSENTIAL DISCOVERY & ANDROID COMPANION STRIP */}
       <section className="space-y-3 pt-2">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <button
