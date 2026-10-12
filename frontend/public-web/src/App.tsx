@@ -16,6 +16,7 @@ import { UserProfileView } from './components/UserProfileView';
 import { SafetyResourcesView } from './components/SafetyResourcesView';
 import { LegalViews } from './components/LegalViews';
 import { NotFoundView } from './components/NotFoundView';
+import { LiveTrackingView } from './components/LiveTrackingView';
 
 import type { PageView } from './types';
 
@@ -29,7 +30,9 @@ export const AppContent: React.FC = () => {
     if (loading) return;
 
     const syncRouteFromHash = () => {
-      const hash = window.location.hash.replace('#', '').toLowerCase();
+      const fullHash = window.location.hash.replace('#', '').toLowerCase();
+      const baseHash = fullHash.split('?')[0];
+
       const validAppViews: PageView[] = [
         'welcome',
         'dashboard',
@@ -44,17 +47,23 @@ export const AppContent: React.FC = () => {
         'resources',
         'privacy',
         'terms',
+        'track',
       ];
 
-      if (!hash || hash === 'welcome') {
+      if (baseHash === 'track' || fullHash.startsWith('track')) {
+        setCurrentView('track');
+        return;
+      }
+
+      if (!baseHash || baseHash === 'welcome') {
         if (user) {
           setCurrentView('dashboard');
           window.location.hash = 'dashboard';
         } else {
           setCurrentView('welcome');
         }
-      } else if (validAppViews.includes(hash as PageView)) {
-        setCurrentView(hash as PageView);
+      } else if (validAppViews.includes(baseHash as PageView)) {
+        setCurrentView(baseHash as PageView);
       } else {
         setCurrentView('not-found');
       }
@@ -75,12 +84,14 @@ export const AppContent: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF7F6] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-white border border-[#EEE5E7] p-2 shadow-xs mb-4 animate-pulse overflow-hidden shrink-0 flex items-center justify-center">
-          <div className="w-7 h-7 rounded-lg bg-[#A61945] flex items-center justify-center text-white font-bold text-sm">
-            S
-          </div>
+        <div className="w-12 h-12 rounded-2xl bg-white border border-[#EEE5E7] p-1.5 shadow-xs mb-4 animate-pulse overflow-hidden shrink-0 flex items-center justify-center">
+          <img 
+            src="/logo.png" 
+            alt="SafeHer Logo" 
+            className="w-full h-full rounded-xl object-cover" 
+          />
         </div>
-        <p className="text-xs font-semibold text-[#28151D]">SafeMate</p>
+        <p className="text-xs font-semibold text-[#28151D]">SafeHer</p>
         <p className="text-[11px] text-[#81747D] mt-1">Initializing secure session...</p>
       </div>
     );
@@ -98,6 +109,11 @@ export const AppContent: React.FC = () => {
         />
       </>
     );
+  }
+
+  // Standalone recipient tracking view
+  if (currentView === 'track') {
+    return <LiveTrackingView onNavigate={navigateTo} />;
   }
 
   const renderCurrentView = () => {
@@ -151,8 +167,10 @@ export const AppContent: React.FC = () => {
 
       default:
         return <NotFoundView onNavigate={navigateTo} />;
+
     }
   };
+
 
   return (
     <>

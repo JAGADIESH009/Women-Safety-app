@@ -9,7 +9,6 @@ import {
   Lock, 
   User as UserIcon, 
   Phone, 
-  ShieldCheck, 
   AlertCircle, 
   CheckCircle2, 
   ArrowRight,
@@ -124,8 +123,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white border border-[var(--color-border)] p-0.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+              <img src="/logo.png" alt="SafeHer" className="w-full h-full rounded-lg object-cover" />
             </div>
             <div>
               <h3 id="account-modal-title" className="text-base font-bold text-[var(--color-text-primary)]">

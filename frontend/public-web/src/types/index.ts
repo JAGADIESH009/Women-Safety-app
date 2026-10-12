@@ -12,7 +12,8 @@ export type PageView =
   | 'resources'
   | 'reports'
   | 'privacy'
-  | 'terms';
+  | 'terms'
+  | 'track';
 
 export interface UserProfile {
   uid: string;

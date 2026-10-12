@@ -12,8 +12,7 @@ import {
   Search, 
   ChevronDown, 
   Menu, 
-  X,
-  Shield
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { PageView } from '../types';
@@ -63,12 +62,20 @@ export const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({
       
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F7EEEE] border-b border-[#EEE5E7] sticky top-0 z-40">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#A61945] text-white flex items-center justify-center shadow-xs">
-            <Shield size={18} className="fill-current" />
+        <button
+          onClick={() => handleNavClick('dashboard')}
+          className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer"
+          aria-label="SafeHer Home"
+        >
+          <div className="w-8 h-8 rounded-lg bg-white border border-[#EEE5E7] p-0.5 flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+            <img 
+              src="/logo.png" 
+              alt="SafeHer Logo" 
+              className="w-full h-full rounded-md object-cover" 
+            />
           </div>
-          <span className="font-bold text-base tracking-tight text-[#28151D]">SafeMate</span>
-        </div>
+          <span className="font-bold text-base tracking-tight text-[#28151D]">SafeHer</span>
+        </button>
         <button
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           className="p-2 rounded-lg text-[#28151D] hover:bg-[#EEDFE2] transition-colors"
@@ -85,13 +92,20 @@ export const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({
         }`}
       >
         <div className="space-y-6">
-          {/* Logo Header */}
-          <div className="flex items-center gap-2.5 px-2">
-            <div className="w-8 h-8 rounded-lg bg-[#A61945] text-white flex items-center justify-center shadow-xs shrink-0">
-              <Shield size={18} className="fill-current" />
+          <button
+            onClick={() => handleNavClick('dashboard')}
+            className="flex items-center gap-2.5 px-2 text-left focus:outline-none w-full group cursor-pointer"
+            aria-label="SafeHer Home"
+          >
+            <div className="w-8 h-8 rounded-lg bg-white border border-[#EEE5E7] p-0.5 flex items-center justify-center shadow-xs shrink-0 overflow-hidden group-hover:border-[#A61945]/40 transition-colors">
+              <img 
+                src="/logo.png" 
+                alt="SafeHer Logo" 
+                className="w-full h-full rounded-md object-cover" 
+              />
             </div>
-            <span className="font-bold text-lg tracking-tight text-[#28151D]">SafeMate</span>
-          </div>
+            <span className="font-bold text-lg tracking-tight text-[#28151D]">SafeHer</span>
+          </button>
 
           {/* Navigation Links */}
           <nav className="space-y-1" aria-label="Main Navigation">
