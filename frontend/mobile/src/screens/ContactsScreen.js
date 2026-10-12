@@ -1,199 +1,276 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenWrapper } from '../components/ui/ScreenWrapper';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { SecondaryHeader } from '../components/ui/SecondaryHeader';
-import { UserPlus, User, Trash2, Phone, Pencil } from 'lucide-react-native';
+import { UserPlus, User, Trash2, Phone, Pencil, RotateCw, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useAppTheme, spacing, typography, borderRadius } from '../utils/theme';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const STORAGE_KEY = 'women_safety_contacts';
 
-export function ContactsScreen() {
+/**
+ * Normalizes phone numbers to standard 10-digit national number
+ * to ensure +91 98765 43210 and 9876543210 match identically.
+ */
+const normalizePhone = (phone) => {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+};
+
+/**
+ * Returns a stable unique key for deduplication.
+ * Prefers server backendId or numeric ID, falling back to normalized 10-digit phone.
+ */
+const getStableContactKey = (contact) => {
+  if (!contact) return '';
+  if (contact.backendId) return `bid:${contact.backendId}`;
+  if (contact.id && !isNaN(contact.id) && String(contact.id).length < 10) {
+    return `bid:${contact.id}`;
+  }
+  const normPhone = normalizePhone(contact.phone);
+  if (normPhone) return `phone:${normPhone}`;
+  return `id:${contact.id}`;
+};
+
+/**
+ * Checks whether two contact records represent the exact same person.
+ */
+const areContactsMatching = (a, b) => {
+  if (!a || !b) return false;
+  const aBid = a.backendId || (!isNaN(a.id) && String(a.id).length < 10 ? a.id : null);
+  const bBid = b.backendId || (!isNaN(b.id) && String(b.id).length < 10 ? b.id : null);
+  if (aBid && bBid && String(aBid) === String(bBid)) return true;
+  if (a.id && b.id && String(a.id) === String(b.id)) return true;
+  const aPhone = normalizePhone(a.phone);
+  const bPhone = normalizePhone(b.phone);
+  if (aPhone && bPhone && aPhone === bPhone) return true;
+  return false;
+};
+
+export function ContactsScreen({ navigation }) {
   const [contacts, setContacts] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  
+  // Real-time synchronization state
   const [isSyncing, setIsSyncing] = useState(false);
-  const syncInProgress = React.useRef(false);
+  const [syncStatus, setSyncStatus] = useState(null); // 'success' | 'offline' | 'error' | null
+  const [lastSyncedText, setLastSyncedText] = useState('');
+  const syncInProgress = useRef(false);
   
   const { colors, shadows, isDark } = useAppTheme();
   const styles = useMemo(() => getStyles(colors, shadows, isDark), [colors, shadows, isDark]);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      loadLocalContacts().then(() => {
-        syncContactsWithBackend();
-      });
-    }
-  }, [user]);
-
-  const cleanPhone = (phone) => (phone || '').replace(/\D/g, '');
-
-  const saveContacts = async (userContactsToSave) => {
+  /**
+   * Save contacts to local persistent storage (both user-scoped and global for backward compat).
+   */
+  const saveContacts = useCallback(async (userContactsToSave) => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const allContacts = stored ? JSON.parse(stored) : [];
-      // Deduplicate contacts before saving
+      // 1. Deduplicate in memory before writing
       const seen = new Set();
       const uniqueUserContacts = [];
       for (const c of userContactsToSave) {
-        const key = cleanPhone(c.phone) || c.id;
-        if (!seen.has(key)) {
+        const key = getStableContactKey(c);
+        if (key && !seen.has(key)) {
           seen.add(key);
           uniqueUserContacts.push({ ...c, userId: user?.uid });
         }
       }
-      // Remove current user's old contacts and legacy contacts (no userId), append new ones
-      const otherContacts = allContacts.filter(c => c.userId && c.userId !== user?.uid);
+
+      // 2. Write to user-scoped storage key for strict data isolation
+      if (user?.uid) {
+        await AsyncStorage.setItem(`${STORAGE_KEY}_${user.uid}`, JSON.stringify(uniqueUserContacts));
+      }
+
+      // 3. Write to legacy shared storage key keeping other users' contacts intact
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const allContacts = stored ? JSON.parse(stored) : [];
+      const otherContacts = allContacts.filter(c => c.userId && user?.uid && c.userId !== user.uid);
       const updatedAll = [...otherContacts, ...uniqueUserContacts];
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAll));
     } catch (e) {
-      console.error("Failed to save contacts", e);
+      console.error("[ContactsScreen] Failed to save contacts to storage", e);
     }
-  };
+  }, [user]);
 
-  const loadLocalContacts = async () => {
+  /**
+   * Load local cached contacts immediately for zero-latency startup.
+   */
+  const loadLocalContacts = useCallback(async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const allLocalContacts = stored ? JSON.parse(stored) : [];
-      // Include contacts for user or legacy contacts with missing userId
-      const rawLocal = allLocalContacts
-        .filter(c => c.userId === user?.uid || !c.userId)
-        .map(c => ({ ...c, userId: user?.uid }));
-      
-      const seen = new Set();
-      const localContacts = [];
-      for (const c of rawLocal) {
-        const key = cleanPhone(c.phone) || c.id;
-        if (!seen.has(key)) {
-          seen.add(key);
-          localContacts.push(c);
+      let rawLocal = [];
+      if (user?.uid) {
+        const userStored = await AsyncStorage.getItem(`${STORAGE_KEY}_${user.uid}`);
+        if (userStored) {
+          rawLocal = JSON.parse(userStored);
         }
       }
-      setContacts(localContacts);
-      return localContacts;
+
+      if (rawLocal.length === 0) {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const allContacts = stored ? JSON.parse(stored) : [];
+        rawLocal = allContacts.filter(c => (user?.uid ? c.userId === user.uid : true) || !c.userId);
+      }
+
+      // Strictly deduplicate local records
+      const seen = new Set();
+      const dedupedLocal = [];
+      for (const c of rawLocal) {
+        const key = getStableContactKey(c);
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          dedupedLocal.push({ ...c, userId: user?.uid });
+        }
+      }
+
+      setContacts(dedupedLocal);
+      return dedupedLocal;
     } catch (e) {
-      console.error('Failed to load local contacts', e);
+      console.error('[ContactsScreen] Failed to load local contacts', e);
       return [];
     }
-  };
+  }, [user]);
 
-
-  const syncContactsWithBackend = async () => {
+  /**
+   * Performs cloud synchronization with backend API and Firestore.
+   */
+  const syncContactsWithBackend = useCallback(async (isManual = false) => {
     if (syncInProgress.current) return;
     syncInProgress.current = true;
     setIsSyncing(true);
+    setSyncStatus(null);
     
     try {
       const backendContacts = await api.getContacts();
-      if (!backendContacts) return;
-
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const allLocalContacts = stored ? JSON.parse(stored) : [];
-      const rawLocal = allLocalContacts
-        .filter(c => c.userId === user?.uid || !c.userId)
-        .map(c => ({ ...c, userId: user?.uid }));
-
-      const seenLocal = new Set();
-      const localContacts = [];
-      for (const c of rawLocal) {
-        const key = cleanPhone(c.phone) || c.id;
-        if (!seenLocal.has(key)) {
-          seenLocal.add(key);
-          localContacts.push(c);
-        }
+      if (!Array.isArray(backendContacts)) {
+        throw new Error('Invalid backend response');
       }
 
-      // Process offline deletions
-      const pending = await AsyncStorage.getItem(`pending_contact_deletes_${user?.uid}`);
+      // Process pending offline deletions
+      const pendingKey = user?.uid ? `pending_contact_deletes_${user.uid}` : 'pending_contact_deletes';
+      const pending = await AsyncStorage.getItem(pendingKey);
       let pendingDeletes = pending ? JSON.parse(pending) : [];
       const remainingDeletes = [];
       
       for (const delId of pendingDeletes) {
-          try {
-              await api.deleteContact(delId);
-          } catch(e) {
-              remainingDeletes.push(delId);
-          }
+        try {
+          await api.deleteContact(delId);
+        } catch(e) {
+          remainingDeletes.push(delId);
+        }
       }
       
       if (remainingDeletes.length !== pendingDeletes.length) {
-          await AsyncStorage.setItem(`pending_contact_deletes_${user?.uid}`, JSON.stringify(remainingDeletes));
+        await AsyncStorage.setItem(pendingKey, JSON.stringify(remainingDeletes));
       }
 
       const validBackend = backendContacts.filter(bc => !remainingDeletes.includes(bc.id));
 
+      // Map backend records
       const mapped = validBackend.map(bc => ({
+        id: bc.id.toString(),
+        backendId: bc.id,
+        userId: user?.uid,
+        name: bc.name,
+        phone: bc.phone,
+        relation: bc.relation,
+        isPrimary: bc.is_primary
+      }));
+
+      // Load local cache to check for offline additions
+      const currentLocal = await loadLocalContacts();
+      
+      // An unsynced local contact is one that has NO matching record in validBackend by ID or phone
+      const unsyncedLocal = currentLocal.filter(lc => {
+        return !validBackend.some(bc => areContactsMatching(lc, {
           id: bc.id.toString(),
           backendId: bc.id,
-          userId: user?.uid,
-          name: bc.name,
           phone: bc.phone,
-          relation: bc.relation,
-          isPrimary: bc.is_primary
-      }));
-      
-      // Find local contacts created offline that are not already present in backend
-      const unsyncedLocal = localContacts.filter(lc => {
-        const lp = cleanPhone(lc.phone);
-        return !validBackend.some(bc => 
-          bc.id === lc.backendId || 
-          bc.id.toString() === lc.id?.toString() ||
-          (lp && cleanPhone(bc.phone) === lp)
-        );
+          name: bc.name
+        }));
       });
-      
+
+      // Synchronize genuinely new offline contacts to backend
       for (const uc of unsyncedLocal) {
-          try {
-            const bc = await api.createContact({
-              name: uc.name,
-              phone: uc.phone,
-              relation: uc.relation,
-              is_primary: uc.isPrimary || false
+        try {
+          const bc = await api.createContact({
+            name: uc.name,
+            phone: uc.phone,
+            relation: uc.relation || 'Emergency Contact',
+            is_primary: uc.isPrimary || false
+          });
+          if (bc && bc.id) {
+            mapped.push({
+              id: bc.id.toString(),
+              backendId: bc.id,
+              userId: user?.uid,
+              name: bc.name,
+              phone: bc.phone,
+              relation: bc.relation,
+              isPrimary: bc.is_primary
             });
-            if (bc && bc.id) {
-                mapped.push({
-                  id: bc.id.toString(),
-                  backendId: bc.id,
-                  userId: user?.uid,
-                  name: bc.name,
-                  phone: bc.phone,
-                  relation: bc.relation,
-                  isPrimary: bc.is_primary
-                });
-            }
-          } catch (err) {
-              mapped.push(uc); // keep it in list to retry later
           }
+        } catch (err) {
+          // If creation fails due to offline or error, keep it locally to retry
+          mapped.push(uc);
+        }
       }
 
-      // Deduplicate merged contacts across backend and local
-      const seenMerged = new Set();
+      // Canonical deduplication using stable keys
+      const seen = new Set();
       const finalMerged = [];
-      for (const c of mapped) {
-        const key = cleanPhone(c.phone) || c.id;
-        if (!seenMerged.has(key)) {
-          seenMerged.add(key);
+      // Sort primary contacts first
+      const sortedMapped = [...mapped].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+      for (const c of sortedMapped) {
+        const key = getStableContactKey(c);
+        if (key && !seen.has(key)) {
+          seen.add(key);
           finalMerged.push({ ...c, userId: user?.uid });
         }
       }
 
       setContacts(finalMerged);
       await saveContacts(finalMerged);
+      setSyncStatus('success');
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastSyncedText(`Synced at ${timeStr}`);
     } catch (backendErr) {
-      console.log("Sync failed, keeping local contacts:", backendErr.message);
+      console.log("[ContactsScreen] Cloud sync failed, using cached contacts:", backendErr.message);
+      setSyncStatus('offline');
+      setLastSyncedText('Offline • Displaying cached contacts');
     } finally {
       setIsSyncing(false);
       syncInProgress.current = false;
     }
-  };
+  }, [user, loadLocalContacts, saveContacts]);
+
+  // Initial load & focus refresh
+  useEffect(() => {
+    if (user) {
+      loadLocalContacts().then(() => {
+        syncContactsWithBackend();
+      });
+    }
+
+    const unsubscribe = navigation?.addListener ? navigation.addListener('focus', () => {
+      if (user && !syncInProgress.current) {
+        loadLocalContacts().then(() => {
+          syncContactsWithBackend();
+        });
+      }
+    }) : undefined;
+
+    return unsubscribe;
+  }, [user, navigation, loadLocalContacts, syncContactsWithBackend]);
 
   const handleSaveContact = async () => {
     if (!newName.trim() || !newPhone.trim()) {
@@ -202,7 +279,7 @@ export function ContactsScreen() {
     }
 
     if (editingContact) {
-      const updatedContact = { ...editingContact, name: newName, phone: newPhone };
+      const updatedContact = { ...editingContact, name: newName.trim(), phone: newPhone.trim() };
       const updated = contacts.map(c => c.id === editingContact.id ? updatedContact : c);
       setContacts(updated);
       
@@ -216,43 +293,27 @@ export function ContactsScreen() {
         if (editingContact.backendId) {
           try {
             await api.updateContact(editingContact.backendId, {
-              name: newName,
-              phone: newPhone,
+              name: newName.trim(),
+              phone: newPhone.trim(),
             });
           } catch (e) {
-            console.log("Failed to update on backend", e.message);
-          }
-        } else {
-          try {
-            const bc = await api.createContact({
-              name: newName,
-              phone: newPhone,
-              relation: editingContact.relation || 'Added',
-              is_primary: editingContact.isPrimary || false
-            });
-            if (bc && bc.id) {
-               const syncedContact = { ...updatedContact, backendId: bc.id, id: bc.id.toString() };
-               const finalUpdated = contacts.map(c => c.id === editingContact.id ? syncedContact : c);
-               setContacts(finalUpdated);
-               await saveContacts(finalUpdated);
-            }
-          } catch (e) {
-            console.log("Failed to sync edited local contact", e.message);
+            console.log("[ContactsScreen] Failed to update on backend:", e.message);
           }
         }
       } catch (e) {
-        console.error('Failed to update contact', e);
+        console.error('[ContactsScreen] Failed to update contact', e);
       }
       return;
     }
 
-    const tempId = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 5);
+    // New Contact Creation
+    const tempId = `temp-${Date.now()}`;
     const newContact = {
       id: tempId,
       userId: user?.uid,
-      name: newName,
-      phone: newPhone,
-      relation: 'Added',
+      name: newName.trim(),
+      phone: newPhone.trim(),
+      relation: 'Emergency Contact',
       isPrimary: contacts.length === 0,
     };
 
@@ -266,7 +327,7 @@ export function ContactsScreen() {
       setNewName('');
       setNewPhone('');
 
-      // Background sync
+      // Background cloud sync
       try {
         const backendContact = await api.createContact({
           name: newContact.name,
@@ -276,19 +337,26 @@ export function ContactsScreen() {
         });
         
         if (backendContact && backendContact.id) {
-           const finalContacts = updated.map(c => 
-             c.id === tempId 
-               ? { ...c, id: backendContact.id.toString(), backendId: backendContact.id, userId: user?.uid } 
-               : c
-           );
-           setContacts(finalContacts);
-           await saveContacts(finalContacts);
+          const finalContacts = updated.map(c => 
+            c.id === tempId 
+              ? { 
+                  ...c, 
+                  id: backendContact.id.toString(), 
+                  backendId: backendContact.id, 
+                  userId: user?.uid,
+                  name: backendContact.name,
+                  phone: backendContact.phone
+                } 
+              : c
+          );
+          setContacts(finalContacts);
+          await saveContacts(finalContacts);
         }
       } catch (backendErr) {
-        console.log("Failed to sync new contact to backend, keeping local", backendErr.message);
+        console.log("[ContactsScreen] Failed to sync new contact to backend, keeping local", backendErr.message);
       }
     } catch (e) {
-      console.error('Failed to save contact', e);
+      console.error('[ContactsScreen] Failed to save contact', e);
     }
   };
 
@@ -320,23 +388,24 @@ export function ContactsScreen() {
       const backendIdToDelete = contactToDelete?.backendId || (!isNaN(id) && id.toString().length < 10 ? parseInt(id, 10) : null);
       
       if (backendIdToDelete) {
-         try {
-           await api.deleteContact(backendIdToDelete);
-         } catch (backendErr) {
-           console.log("Failed to delete contact from backend", backendErr.message);
-           const is404 = backendErr.status === 404 || (backendErr.message && backendErr.message.includes('404'));
-           if (!is404) {
-             const pending = await AsyncStorage.getItem(`pending_contact_deletes_${user?.uid}`);
-             const pendingDeletes = pending ? JSON.parse(pending) : [];
-             if (!pendingDeletes.includes(backendIdToDelete)) {
-                 pendingDeletes.push(backendIdToDelete);
-                 await AsyncStorage.setItem(`pending_contact_deletes_${user?.uid}`, JSON.stringify(pendingDeletes));
-             }
-           }
-         }
+        try {
+          await api.deleteContact(backendIdToDelete);
+        } catch (backendErr) {
+          console.log("[ContactsScreen] Failed to delete contact from backend:", backendErr.message);
+          const is404 = backendErr.status === 404 || (backendErr.message && backendErr.message.includes('404'));
+          if (!is404) {
+            const pendingKey = user?.uid ? `pending_contact_deletes_${user.uid}` : 'pending_contact_deletes';
+            const pending = await AsyncStorage.getItem(pendingKey);
+            const pendingDeletes = pending ? JSON.parse(pending) : [];
+            if (!pendingDeletes.includes(backendIdToDelete)) {
+              pendingDeletes.push(backendIdToDelete);
+              await AsyncStorage.setItem(pendingKey, JSON.stringify(pendingDeletes));
+            }
+          }
+        }
       }
     } catch (e) {
-      console.error('Failed to delete contact', e);
+      console.error('[ContactsScreen] Failed to delete contact', e);
     }
   };
 
@@ -344,27 +413,34 @@ export function ContactsScreen() {
     <Card style={styles.contactCard} variant="flat">
       <View style={styles.contactInfo}>
         <View style={styles.avatar}>
-          <User size={20} color={colors.textPrimary} />
+          <User size={20} color={colors.accentBrand || colors.textPrimary} />
         </View>
         <View style={styles.textContainer}>
-          <Text style={styles.contactName}>{item.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.contactName}>{item.name}</Text>
+            {item.isPrimary && (
+              <View style={styles.primaryBadge}>
+                <Text style={styles.primaryBadgeText}>Primary</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.contactPhone}>{item.phone}</Text>
         </View>
       </View>
       <View style={styles.actionButtons}>
         <TouchableOpacity 
-          style={styles.editBtn} 
+          style={styles.actionBtn} 
           onPress={() => handleEdit(item)}
           activeOpacity={0.7}
         >
-          <Pencil size={20} color={colors.textPrimary} />
+          <Pencil size={18} color={colors.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.deleteBtn} 
           onPress={() => confirmDelete(item.id)}
           activeOpacity={0.7}
         >
-          <Trash2 size={20} color={colors.accentEmergency} />
+          <Trash2 size={18} color={colors.accentEmergency} />
         </TouchableOpacity>
       </View>
     </Card>
@@ -372,10 +448,47 @@ export function ContactsScreen() {
 
   return (
     <ScreenWrapper scrollable={false} contentContainerStyle={styles.container}>
-      <SecondaryHeader title="Trusted Network" />
+      {/* Top Header with working manual Cloud Sync Button */}
+      <SecondaryHeader 
+        title="Trusted Network" 
+        rightAction={
+          <TouchableOpacity 
+            onPress={() => syncContactsWithBackend(true)}
+            disabled={isSyncing}
+            style={[styles.syncHeaderBtn, isSyncing && styles.syncHeaderBtnDisabled]}
+            activeOpacity={0.7}
+            accessibilityLabel="Sync contacts with cloud"
+          >
+            {isSyncing ? (
+              <ActivityIndicator size="small" color={colors.accentBrand || colors.textPrimary} />
+            ) : (
+              <RotateCw size={18} color={colors.accentBrand || colors.textPrimary} />
+            )}
+            <Text style={styles.syncBtnText}>{isSyncing ? 'Syncing...' : 'Sync'}</Text>
+          </TouchableOpacity>
+        }
+      />
+
       <View style={styles.header}>
         <Text style={styles.subtitle}>These contacts will be notified during an SOS emergency.</Text>
-        {isSyncing && <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>Syncing with cloud...</Text>}
+        
+        {/* Sync Status Banner */}
+        {lastSyncedText ? (
+          <View style={[
+            styles.syncStatusBanner,
+            syncStatus === 'success' && styles.syncBannerSuccess,
+            syncStatus === 'offline' && styles.syncBannerOffline,
+          ]}>
+            {syncStatus === 'success' ? (
+              <CheckCircle2 size={13} color="#059669" />
+            ) : syncStatus === 'offline' ? (
+              <AlertCircle size={13} color="#D97706" />
+            ) : (
+              <RotateCw size={13} color={colors.textSecondary} />
+            )}
+            <Text style={styles.syncStatusText}>{lastSyncedText}</Text>
+          </View>
+        ) : null}
       </View>
 
       {isAdding ? (
@@ -383,14 +496,14 @@ export function ContactsScreen() {
           <Text style={styles.formTitle}>{editingContact ? 'Edit Contact' : 'Add New Contact'}</Text>
           <Input 
             label="Name" 
-            placeholder="Jane Doe" 
+            placeholder="e.g. Mom" 
             value={newName} 
             onChangeText={setNewName} 
             leadingIcon={<User size={18} color={colors.textSecondary} />}
           />
           <Input 
             label="Phone Number" 
-            placeholder="+1 234 567 8900" 
+            placeholder="e.g. +91 98765 43210" 
             value={newPhone} 
             onChangeText={setNewPhone} 
             keyboardType="phone-pad"
@@ -426,7 +539,7 @@ export function ContactsScreen() {
           
           <FlatList
             data={contacts}
-            keyExtractor={(item, index) => item.id ? `${item.id}-${index}` : index.toString()}
+            keyExtractor={(item) => getStableContactKey(item)}
             renderItem={renderContact}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -455,11 +568,54 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.xl,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   subtitle: {
     ...typography.body,
     color: colors.textSecondary,
+    fontSize: 13,
+  },
+  syncHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  syncHeaderBtnDisabled: {
+    opacity: 0.6,
+  },
+  syncBtnText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  syncStatusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: colors.bgSecondary,
+    alignSelf: 'flex-start',
+  },
+  syncBannerSuccess: {
+    backgroundColor: 'rgba(5, 150, 105, 0.08)',
+  },
+  syncBannerOffline: {
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+  },
+  syncStatusText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontSize: 11,
   },
   listContainer: {
     flex: 1,
@@ -492,9 +648,9 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     flex: 1,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.bgTertiary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -504,16 +660,32 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
   textContainer: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   contactName: {
     ...typography.bodySemibold,
     color: colors.textPrimary,
+  },
+  primaryBadge: {
+    backgroundColor: 'rgba(166, 25, 69, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  primaryBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.accentBrand || '#A61945',
   },
   contactPhone: {
     ...typography.footnote,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  actions: {
+  actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -525,6 +697,8 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     backgroundColor: colors.bgTertiary,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   deleteBtn: {
     width: 36,
@@ -583,4 +757,3 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     flex: 1,
   }
 });
-

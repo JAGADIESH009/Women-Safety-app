@@ -106,7 +106,7 @@ export function EmergencyActiveScreen({ navigation }) {
 
   return (
     <ScreenWrapper scrollable edges={['top', 'bottom']} style={styles.container}>
-      <Animated.View style={[styles.redFlash, { opacity: pulseAnim, pointerEvents: 'none' }]} />
+      <Animated.View pointerEvents="none" style={[styles.redFlash, { opacity: pulseAnim }]} />
       
       <View style={styles.content}>
         <View style={styles.header}>
@@ -245,7 +245,6 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     backgroundColor: colors.accentEmergencyMuted,
     borderWidth: 2,
     borderColor: isDark ? 'rgba(244, 63, 94, 0.3)' : 'rgba(225, 29, 72, 0.3)',
-    zIndex: 100,
   },
   content: {
     padding: spacing.xl,

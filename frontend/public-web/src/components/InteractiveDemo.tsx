@@ -255,7 +255,7 @@ export const InteractiveDemo: React.FC = () => {
                       <span>M</span>
                     </div>
                     <h3 className="caller-name">Mom (Home)</h3>
-                    <p className="caller-label">Mobile +91 98401 23456</p>
+                    <p className="caller-label">Mobile +91 98765 43210</p>
 
                     <div className="incoming-actions">
                       <button 

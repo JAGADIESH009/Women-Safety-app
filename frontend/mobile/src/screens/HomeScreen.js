@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions, ScrollView, Animated } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions, ScrollView, Animated, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useEmergency } from '../context/EmergencyContext';
@@ -8,8 +8,15 @@ import { LocationStatus } from '../components/LocationStatus';
 import { ScreenWrapper } from '../components/ui/ScreenWrapper';
 import { Card } from '../components/ui/Card';
 import { useLocation } from '../hooks/useLocation';
-import { ShieldCheck, Users, PhoneCall, AlertTriangle, Activity, ShieldAlert, ChevronRight, CheckCircle } from 'lucide-react-native';
+import { api } from '../services/api';
+import { ShieldCheck, Users, PhoneCall, AlertTriangle, Activity, ShieldAlert, ChevronRight, CheckCircle, RefreshCw } from 'lucide-react-native';
 import { useAppTheme, spacing, typography, borderRadius } from '../utils/theme';
+
+const normalizePhone = (phone) => {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+};
 
 export function HomeScreen({ navigation }) {
   const { user } = useAuth();
@@ -17,34 +24,56 @@ export function HomeScreen({ navigation }) {
   const { activeIncident } = useEmergency();
   const { width } = useWindowDimensions();
   const [contactsReady, setContactsReady] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncInProgress = useRef(false);
   const { colors, shadows, isDark } = useAppTheme();
   
   const pulseAnim = useRef(new Animated.Value(0.2)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
   const styles = useMemo(() => getStyles(colors, shadows, isDark), [colors, shadows, isDark]);
 
   const isDesktop = width > 768;
   const isSecure = !activeIncident && !errorMsg && !isLoading;
 
-  useEffect(() => {
-    const loadContacts = async () => {
-      try {
+  const loadContacts = useCallback(async () => {
+    try {
+      let rawContacts = [];
+      if (user?.uid) {
+        const stored = await AsyncStorage.getItem(`women_safety_contacts_${user.uid}`);
+        if (stored) rawContacts = JSON.parse(stored);
+      }
+      if (!rawContacts || rawContacts.length === 0) {
         const stored = await AsyncStorage.getItem('women_safety_contacts');
         if (stored) {
-          const parsed = JSON.parse(stored);
-          setContactsReady(parsed.length);
+          const all = JSON.parse(stored);
+          rawContacts = user?.uid ? all.filter(c => !c.userId || c.userId === user.uid) : all;
         }
-      } catch(e) {
-        console.error(e);
       }
-    };
-    
+      // Deduplicate with normalized phone & stable ID
+      const seen = new Set();
+      let uniqueCount = 0;
+      for (const c of (rawContacts || [])) {
+        const norm = normalizePhone(c.phone);
+        const key = norm ? `phone:${norm}` : (c.backendId ? `bid:${c.backendId}` : (c.id ? `id:${c.id}` : null));
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          uniqueCount++;
+        }
+      }
+      setContactsReady(uniqueCount);
+    } catch(e) {
+      console.error(e);
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadContacts();
     });
 
     loadContacts();
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, loadContacts]);
 
   useEffect(() => {
     // Ambient safety pulse
@@ -56,6 +85,62 @@ export function HomeScreen({ navigation }) {
     ).start();
   }, [pulseAnim]);
 
+  const handleManualSync = async () => {
+    if (isSyncing || syncInProgress.current) return;
+    if (!user) {
+      navigation.navigate('ProfileTab');
+      return;
+    }
+    syncInProgress.current = true;
+    setIsSyncing(true);
+    
+    // Spin animation
+    spinAnim.setValue(0);
+    const spinLoop = Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: Platform.OS !== 'web',
+      })
+    );
+    spinLoop.start();
+
+    try {
+      const remoteContacts = await api.getContacts();
+      if (Array.isArray(remoteContacts)) {
+        const seen = new Set();
+        const deduped = [];
+        for (const rc of remoteContacts) {
+          const norm = normalizePhone(rc.phone);
+          const key = norm ? `phone:${norm}` : `id:${rc.id}`;
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            deduped.push({
+              ...rc,
+              backendId: rc.id,
+              userId: user.uid,
+              isSynced: true,
+            });
+          }
+        }
+        await AsyncStorage.setItem(`women_safety_contacts_${user.uid}`, JSON.stringify(deduped));
+        setContactsReady(deduped.length);
+      }
+    } catch (err) {
+      console.warn('[HomeScreen] Cloud sync warning:', err);
+    } finally {
+      spinLoop.stop();
+      spinAnim.setValue(0);
+      setIsSyncing(false);
+      syncInProgress.current = false;
+    }
+  };
+
+  const spinInterpolate = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   // Calculate Readiness
   const readinessScore = (location ? 40 : 0) + (contactsReady > 0 ? 40 : 0) + 20; // base 20% for auth
 
@@ -65,9 +150,22 @@ export function HomeScreen({ navigation }) {
         <Text style={styles.greeting}>Good evening,</Text>
         <Text style={styles.userName}>{user?.name || 'User'}</Text>
       </View>
-      <TouchableOpacity onPress={() => navigation.navigate('ProfileTab')} style={styles.avatar} activeOpacity={0.7}>
-        <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() || 'U'}</Text>
-      </TouchableOpacity>
+      <View style={styles.headerActions}>
+        <TouchableOpacity 
+          onPress={handleManualSync} 
+          style={styles.syncButton} 
+          activeOpacity={0.7}
+          disabled={isSyncing}
+          accessibilityLabel="Sync with cloud"
+        >
+          <Animated.View style={{ transform: [{ rotate: spinInterpolate }] }}>
+            <RefreshCw size={18} color={isSyncing ? colors.accentBrand : colors.textSecondary} />
+          </Animated.View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('ProfileTab')} style={styles.avatar} activeOpacity={0.7}>
+          <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() || 'U'}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -342,6 +440,22 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
   userName: {
     ...typography.h2,
     color: colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  syncButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.subtle,
   },
   avatar: {
     width: 44,

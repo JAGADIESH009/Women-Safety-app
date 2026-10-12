@@ -371,6 +371,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const continueAsGuest = () => {
+    const currentUid = user?.uid;
+    clearUserLocalData(currentUid);
     setIsGuest(true);
     sessionStorage.setItem(GUEST_STORAGE_KEY, 'true');
     setUser(null);

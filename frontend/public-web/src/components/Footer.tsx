@@ -88,29 +88,19 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </a>
         </div>
 
-        {/* Developer Credits with Clickable GitHub Icons */}
+        {/* Project Credits */}
         <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-          <span>Built with care by</span>
+          <span>SafeHer Platform</span>
+          <span>•</span>
           <a 
-            href="https://github.com/Jagadiesh009" 
+            href="https://github.com/JAGADIESH009/Women-Safety-app" 
             target="_blank" 
             rel="noopener noreferrer" 
             className="inline-flex items-center gap-1 font-medium text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors"
-            title="Jagadiesh009 on GitHub"
+            title="SafeHer on GitHub"
           >
             <GitHubIcon size={12} />
-            <span>Jagadiesh009</span>
-          </a>
-          <span>&</span>
-          <a 
-            href="https://github.com/Bhagyaashreee" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="inline-flex items-center gap-1 font-medium text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors"
-            title="Bhagyashree on GitHub"
-          >
-            <GitHubIcon size={12} />
-            <span>Bhagyashree</span>
+            <span>Open Source</span>
           </a>
         </div>
 

@@ -110,7 +110,7 @@ export const AuthenticatedMobileAppShowcase: React.FC = () => {
                 <div className="space-y-2.5 z-20 mt-2">
                   <div className="text-left">
                     <div className="text-[9px] uppercase tracking-wider text-neutral-400 font-bold">SafeHer Companion</div>
-                    <div className="text-xs font-bold text-white">Good evening, Jagadiesh</div>
+                    <div className="text-xs font-bold text-white">Good evening, Guardian</div>
                   </div>
 
                   {/* Readiness Banner */}

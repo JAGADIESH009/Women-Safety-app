@@ -18,7 +18,7 @@ export const APP_CONFIG = {
   
   // Official Links
   githubRepoUrl: import.meta.env.VITE_GITHUB_REPO_URL || 'https://github.com/JAGADIESH009/Women-Safety-app',
-  supportEmail: import.meta.env.VITE_SUPPORT_EMAIL || 'jagadiesh0009@gmail.com',
+  supportEmail: import.meta.env.VITE_SUPPORT_EMAIL || 'support@safeher.org',
 
   // Verified Emergency Numbers
   emergencyHotlines: [

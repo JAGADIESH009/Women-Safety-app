@@ -29,13 +29,13 @@ export const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({
   onNavigate,
   children,
 }) => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, isGuest, signOut } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  const displayName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Jagadiesh';
-  const displaySubtitle = user?.email || 'jagadiesh.me';
+  const displayName = isGuest ? 'Guest' : (profile?.name || user?.displayName || user?.email?.split('@')[0] || 'User');
+  const displaySubtitle = isGuest ? 'Guest Mode' : (user?.email || 'Active Account');
 
   const navItems = [
     { id: 'dashboard' as PageView, label: 'Home', icon: Home },

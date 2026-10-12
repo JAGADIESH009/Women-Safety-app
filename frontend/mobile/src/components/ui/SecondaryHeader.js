@@ -5,7 +5,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { useAppTheme, spacing, typography, borderRadius } from '../../utils/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export function SecondaryHeader({ title, onBack }) {
+export function SecondaryHeader({ title, onBack, rightAction }) {
   const navigation = useNavigation();
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -32,8 +32,11 @@ export function SecondaryHeader({ title, onBack }) {
         <ChevronLeft size={24} color={colors.textPrimary} />
       </TouchableOpacity>
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
-      {/* Empty view to balance the flex layout so title stays centered */}
-      <View style={styles.placeholder} />
+      {rightAction ? (
+        <View style={styles.rightActionWrapper}>{rightAction}</View>
+      ) : (
+        <View style={styles.placeholder} />
+      )}
     </View>
   );
 }
@@ -68,5 +71,10 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
   },
   placeholder: {
     width: 40, // Same width as backButton to keep title exactly centered
+  },
+  rightActionWrapper: {
+    minWidth: 40,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   }
 });

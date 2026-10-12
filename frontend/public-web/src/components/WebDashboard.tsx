@@ -46,12 +46,19 @@ const SAFETY_TIPS = [
 ];
 
 export const WebDashboard: React.FC<WebDashboardProps> = ({ onNavigate }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest } = useAuth();
   
   // Real-time synchronization state
   const [syncState, setSyncState] = useState<SyncState>(syncService.getState());
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const [locationLabel, setLocationLabel] = useState('Campus & Vicinity');
+  const [locationSub, setLocationSub] = useState('Inavolu, Andhra Pradesh • Approximate');
+
+  const handleLocationCaptured = useCallback((lat: number, lng: number, acc: number) => {
+    setLocationLabel(`Location (${lat.toFixed(3)}°, ${lng.toFixed(3)}°)`);
+    setLocationSub(`Accurate to ~${Math.round(acc)} m • Updated just now`);
+  }, []);
 
   // Subscribe to shared sync service
   useEffect(() => {
@@ -88,7 +95,7 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({ onNavigate }) => {
     return 'GOOD EVENING';
   }, []);
 
-  const displayName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Jagadiesh';
+  const displayName = isGuest ? 'Guest' : (profile?.name || user?.displayName || user?.email?.split('@')[0] || 'User');
 
   // Format last synced time
   const formattedLastSynced = useMemo(() => {
@@ -223,15 +230,15 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({ onNavigate }) => {
 
           {/* Map Preview Area */}
           <div className="rounded-xl overflow-hidden border border-[#EEE5E7] h-44 relative bg-[#F7EEEE]">
-            <SafetyMap onOpenFullMap={() => onNavigate('map')} />
+            <SafetyMap onOpenFullMap={() => onNavigate('map')} onLocationCaptured={handleLocationCaptured} />
           </div>
 
           {/* Location Summary Footer */}
           <div className="flex items-start gap-2.5 pt-1">
             <MapPin size={15} className="text-[#A61945] shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-bold text-[#28151D]">Inavolu, Andhra Pradesh</div>
-              <div className="text-[11px] text-[#81747D] mt-0.5">Accurate to ~10 m • Updated just now</div>
+              <div className="text-xs font-bold text-[#28151D]">{locationLabel}</div>
+              <div className="text-[11px] text-[#81747D] mt-0.5">{locationSub}</div>
             </div>
           </div>
 

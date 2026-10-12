@@ -36,7 +36,7 @@ This frontend is independently configured and deployed from the Safety Operation
 4. **Support Ticket & Contact Gateway**:
    - Form validation with anti-spam honeypot.
    - Generates local tracking reference IDs (`SH-XXXXXX`).
-   - Secure mailto dispatch to the official maintainer inbox (`jagadiesh0009@gmail.com`).
+   - Secure mailto dispatch to the official maintainer inbox (`support@safeher.org`).
 
 5. **Firebase Authentication**:
    - Google Sign-In with popup and graceful handling of authorized domains.
@@ -64,7 +64,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-WGX52916TY
 # Support & Portal Links
 VITE_ADMIN_PORTAL_URL=https://safeher-admin-panel.vercel.app/
 VITE_GITHUB_REPO_URL=https://github.com/JAGADIESH009/Women-Safety-app
-VITE_SUPPORT_EMAIL=jagadiesh0009@gmail.com
+VITE_SUPPORT_EMAIL=support@safeher.org
 ```
 
 ---

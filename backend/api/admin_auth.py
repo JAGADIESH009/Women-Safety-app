@@ -93,7 +93,7 @@ def setup_initial_admin(db: Session = Depends(get_db)):
         # We will use the user's provided email and a default id
         admin = AdminUser(
             admin_id="admin",
-            email="work.jagadiesh@gmail.com",
+            email="admin@safeher.app",
             password_hash=get_password_hash("admin123")
         )
         db.add(admin)

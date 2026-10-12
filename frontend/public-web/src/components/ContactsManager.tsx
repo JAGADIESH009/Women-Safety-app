@@ -56,9 +56,11 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
       const deduped: EmergencyContact[] = [];
       const sorted = [...data].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
       for (const c of sorted) {
-        const clean = (c.phone || '').replace(/\D/g, '') || String(c.id);
-        if (!seen.has(clean)) {
-          seen.add(clean);
+        const clean = (c.phone || '').replace(/\D/g, '');
+        const norm = clean.length >= 10 ? clean.slice(-10) : clean;
+        const key = norm || (c.id ? `id_${c.id}` : (c.name ? c.name.trim().toLowerCase() : ''));
+        if (key && !seen.has(key)) {
+          seen.add(key);
           deduped.push(c);
         }
       }

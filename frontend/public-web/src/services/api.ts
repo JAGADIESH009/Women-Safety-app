@@ -171,8 +171,9 @@ export const api = {
       const sorted = [...list].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
       for (const item of sorted) {
         const cleanPhone = (item.phone || '').replace(/\D/g, '');
-        const key = cleanPhone || (item.name ? item.name.trim().toLowerCase() : String(item.id));
-        if (!seen.has(key)) {
+        const normPhone = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+        const key = normPhone || (item.id ? `id_${item.id}` : (item.name ? item.name.trim().toLowerCase() : ''));
+        if (key && !seen.has(key)) {
           seen.add(key);
           result.push(item);
         }

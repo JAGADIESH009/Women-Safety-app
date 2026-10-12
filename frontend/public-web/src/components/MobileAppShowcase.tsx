@@ -139,10 +139,10 @@ export const MobileAppShowcase: React.FC<MobileAppShowcaseProps> = ({ onExploreC
                   <div className="flex items-center justify-between pt-1">
                     <div>
                       <p className="text-[10px] text-neutral-400 uppercase tracking-wider">SafeHer Companion</p>
-                      <h4 className="text-xs font-semibold text-white tracking-tight">Good evening, Jagadiesh</h4>
+                      <h4 className="text-xs font-semibold text-white tracking-tight">Good evening, Guardian</h4>
                     </div>
                     <div className="w-6 h-6 rounded-full bg-rose-950/60 border border-rose-500/30 flex items-center justify-center text-[10px] font-bold text-rose-300">
-                      J
+                      G
                     </div>
                   </div>
 

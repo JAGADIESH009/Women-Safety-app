@@ -21,7 +21,7 @@ export function ScreenWrapper({
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   const innerContent = (
-    <View style={[styles.flex, isDesktop && styles.desktopWrapper, isDesktop && isWide && styles.desktopWideWrapper]}>
+    <View style={[!scrollable && styles.flex, isDesktop && styles.desktopWrapper, isDesktop && isWide && styles.desktopWideWrapper, { width: '100%' }]}>
       {children}
     </View>
   );
