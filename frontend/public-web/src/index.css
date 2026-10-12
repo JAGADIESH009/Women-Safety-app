@@ -183,3 +183,39 @@
   filter: brightness(0.82) invert(1) contrast(1.15) hue-rotate(205deg) saturate(0.65);
 }
 
+/* 3D Smartphone Mockup Styling */
+.phone-3d-wrapper {
+  perspective: 1400px;
+}
+
+.phone-3d-chassis {
+  transform-style: preserve-3d;
+  transform: rotateY(-8deg) rotateX(4deg) rotateZ(1deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
+  animation: phoneFloating 7s ease-in-out infinite alternate;
+}
+
+.phone-3d-chassis:hover {
+  transform: rotateY(-3deg) rotateX(2deg) rotateZ(0deg) translateY(-6px);
+  box-shadow: 0 34px 70px -15px rgba(0, 0, 0, 0.4), 0 16px 36px -10px rgba(134, 22, 53, 0.25);
+}
+
+@keyframes phoneFloating {
+  0% {
+    transform: translateY(0px) rotateY(-8deg) rotateX(4deg) rotateZ(1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateY(-5deg) rotateX(2deg) rotateZ(0.5deg);
+  }
+  100% {
+    transform: translateY(0px) rotateY(-8deg) rotateX(4deg) rotateZ(1deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-3d-chassis {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+

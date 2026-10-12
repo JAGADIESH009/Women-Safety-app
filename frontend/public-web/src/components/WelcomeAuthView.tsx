@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { APP_CONFIG } from '../config/appConfig';
+import { MobileAppShowcase } from './MobileAppShowcase';
 
 interface WelcomeAuthViewProps {
   onEnterDashboard: () => void;
@@ -100,12 +101,19 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
     onEnterDashboard();
   };
 
+  const handleScrollToAuth = () => {
+    const el = document.getElementById('web-companion-auth');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col justify-between selection:bg-[var(--brand-primary)] selection:text-white">
       
       {/* Top Header */}
       <header className="w-full border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-medium)] p-1 flex items-center justify-center shrink-0">
               <img 
@@ -143,20 +151,35 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
         </div>
       </header>
 
-      {/* Main Form: Minimal & Centered */}
-      <main className="flex-1 flex flex-col items-center justify-center py-8 px-4">
-        <div className="w-full max-w-sm mx-auto space-y-4">
+      {/* Main Landing & Product Showcase */}
+      <main className="flex-1 flex flex-col items-center">
+        
+        {/* Promotional Section: "Meet SafeHer on mobile" */}
+        <MobileAppShowcase onExploreClick={handleScrollToAuth} />
 
-          <div className="text-center space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-              {activeTab === 'signin' && 'Sign in to SafeHer'}
-              {activeTab === 'register' && 'Create your account'}
-              {activeTab === 'forgot' && 'Reset password'}
-            </h1>
-          </div>
+        {/* Web Companion Access Section */}
+        <section 
+          id="web-companion-auth" 
+          className="w-full border-t border-[var(--border-subtle)] py-12 px-4 bg-[var(--bg-surface)]/40"
+        >
+          <div className="w-full max-w-sm mx-auto space-y-4">
 
-          {/* Card */}
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-5 space-y-3.5">
+            <div className="text-center space-y-1">
+              <span className="text-[10px] font-bold tracking-wider uppercase text-[var(--text-muted)]">
+                Web Companion Console
+              </span>
+              <h2 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+                {activeTab === 'signin' && 'Sign in to SafeHer'}
+                {activeTab === 'register' && 'Create your account'}
+                {activeTab === 'forgot' && 'Reset password'}
+              </h2>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Access your cloud telemetry & personal contacts on desktop.
+              </p>
+            </div>
+
+            {/* Card */}
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-5 space-y-3.5 shadow-[var(--shadow-card)]">
             
             {/* Feedback Notifications */}
             {(validationError || authError) && (
@@ -365,9 +388,9 @@ export const WelcomeAuthView: React.FC<WelcomeAuthViewProps> = ({ onEnterDashboa
             </div>
 
           </div>
-
         </div>
-      </main>
+      </section>
+    </main>
 
       {/* Slim Footer */}
       <footer className="w-full py-3 px-4 text-center text-[10px] text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
