@@ -34,13 +34,25 @@ export function ContactsScreen() {
     }
   }, [user]);
 
+  const cleanPhone = (phone) => (phone || '').replace(/\D/g, '');
+
   const saveContacts = async (userContactsToSave) => {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       const allContacts = stored ? JSON.parse(stored) : [];
+      // Deduplicate contacts before saving
+      const seen = new Set();
+      const uniqueUserContacts = [];
+      for (const c of userContactsToSave) {
+        const key = cleanPhone(c.phone) || c.id;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueUserContacts.push({ ...c, userId: user?.uid });
+        }
+      }
       // Remove current user's old contacts and legacy contacts (no userId), append new ones
       const otherContacts = allContacts.filter(c => c.userId && c.userId !== user?.uid);
-      const updatedAll = [...otherContacts, ...userContactsToSave];
+      const updatedAll = [...otherContacts, ...uniqueUserContacts];
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAll));
     } catch (e) {
       console.error("Failed to save contacts", e);
@@ -51,10 +63,25 @@ export function ContactsScreen() {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       const allLocalContacts = stored ? JSON.parse(stored) : [];
-      const localContacts = allLocalContacts.filter(c => c.userId === user?.uid);
+      // Include contacts for user or legacy contacts with missing userId
+      const rawLocal = allLocalContacts
+        .filter(c => c.userId === user?.uid || !c.userId)
+        .map(c => ({ ...c, userId: user?.uid }));
+      
+      const seen = new Set();
+      const localContacts = [];
+      for (const c of rawLocal) {
+        const key = cleanPhone(c.phone) || c.id;
+        if (!seen.has(key)) {
+          seen.add(key);
+          localContacts.push(c);
+        }
+      }
       setContacts(localContacts);
+      return localContacts;
     } catch (e) {
       console.error('Failed to load local contacts', e);
+      return [];
     }
   };
 
@@ -70,7 +97,19 @@ export function ContactsScreen() {
 
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       const allLocalContacts = stored ? JSON.parse(stored) : [];
-      let localContacts = allLocalContacts.filter(c => c.userId === user?.uid);
+      const rawLocal = allLocalContacts
+        .filter(c => c.userId === user?.uid || !c.userId)
+        .map(c => ({ ...c, userId: user?.uid }));
+
+      const seenLocal = new Set();
+      const localContacts = [];
+      for (const c of rawLocal) {
+        const key = cleanPhone(c.phone) || c.id;
+        if (!seenLocal.has(key)) {
+          seenLocal.add(key);
+          localContacts.push(c);
+        }
+      }
 
       // Process offline deletions
       const pending = await AsyncStorage.getItem(`pending_contact_deletes_${user?.uid}`);
@@ -101,8 +140,15 @@ export function ContactsScreen() {
           isPrimary: bc.is_primary
       }));
       
-      // Find local contacts created offline
-      const unsyncedLocal = localContacts.filter(c => !c.backendId && isNaN(c.id));
+      // Find local contacts created offline that are not already present in backend
+      const unsyncedLocal = localContacts.filter(lc => {
+        const lp = cleanPhone(lc.phone);
+        return !validBackend.some(bc => 
+          bc.id === lc.backendId || 
+          bc.id.toString() === lc.id?.toString() ||
+          (lp && cleanPhone(bc.phone) === lp)
+        );
+      });
       
       for (const uc of unsyncedLocal) {
           try {
@@ -128,13 +174,19 @@ export function ContactsScreen() {
           }
       }
 
-      const mergedContacts = mapped.map(c => ({ ...c, userId: user?.uid }));
-      if (mergedContacts.length > 0 || unsyncedLocal.length === 0) {
-          // If length is 0 but unsyncedLocal is 0, it means backend actually returned 0 contacts and we have no pending creates.
-          // In this case, we should update local to match backend.
-          setContacts(mergedContacts);
-          await saveContacts(mergedContacts);
+      // Deduplicate merged contacts across backend and local
+      const seenMerged = new Set();
+      const finalMerged = [];
+      for (const c of mapped) {
+        const key = cleanPhone(c.phone) || c.id;
+        if (!seenMerged.has(key)) {
+          seenMerged.add(key);
+          finalMerged.push({ ...c, userId: user?.uid });
+        }
       }
+
+      setContacts(finalMerged);
+      await saveContacts(finalMerged);
     } catch (backendErr) {
       console.log("Sync failed, keeping local contacts:", backendErr.message);
     } finally {

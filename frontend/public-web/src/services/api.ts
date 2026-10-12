@@ -165,6 +165,21 @@ export const api = {
       return [];
     }
 
+    const deduplicate = (list: EmergencyContact[]): EmergencyContact[] => {
+      const seen = new Set<string>();
+      const result: EmergencyContact[] = [];
+      const sorted = [...list].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+      for (const item of sorted) {
+        const cleanPhone = (item.phone || '').replace(/\D/g, '');
+        const key = cleanPhone || (item.name ? item.name.trim().toLowerCase() : String(item.id));
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(item);
+        }
+      }
+      return result;
+    };
+
     try {
       const res = await fetch(`${API_BASE_URL}/contacts/`, {
         headers,
@@ -173,12 +188,12 @@ export const api = {
       if (res.ok) {
         const remoteContacts = await res.json();
         if (Array.isArray(remoteContacts)) {
-          // Real backend data (even if empty array [])
+          const deduped = deduplicate(remoteContacts);
           localStorage.setItem(
             getUserStorageKey('contacts', uid),
-            JSON.stringify(remoteContacts)
+            JSON.stringify(deduped)
           );
-          return remoteContacts;
+          return deduped;
         }
       } else if (res.status === 404) {
         // User profile might not exist on backend yet. Sync profile and retry once.
@@ -192,11 +207,12 @@ export const api = {
         if (retryRes.ok) {
           const retriedContacts = await retryRes.json();
           if (Array.isArray(retriedContacts)) {
+            const deduped = deduplicate(retriedContacts);
             localStorage.setItem(
               getUserStorageKey('contacts', uid),
-              JSON.stringify(retriedContacts)
+              JSON.stringify(deduped)
             );
-            return retriedContacts;
+            return deduped;
           }
         }
       } else {
@@ -208,7 +224,10 @@ export const api = {
       const cached = localStorage.getItem(getUserStorageKey('contacts', uid));
       if (cached) {
         try {
-          return JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            return deduplicate(parsed);
+          }
         } catch {
           // ignore
         }

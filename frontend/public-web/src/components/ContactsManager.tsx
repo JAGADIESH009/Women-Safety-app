@@ -29,6 +29,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
   const { user } = useAuth();
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'syncing' | 'synced' | 'error'>('syncing');
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   // Modal states
@@ -46,13 +47,27 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
 
   const loadContacts = React.useCallback(async () => {
     setLoading(true);
+    setSyncStatus('syncing');
     setFetchError(null);
     try {
       const data = await api.getContacts();
-      setContacts(data);
+      // Defensive client-side deduplication by clean phone or ID
+      const seen = new Set<string>();
+      const deduped: EmergencyContact[] = [];
+      const sorted = [...data].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+      for (const c of sorted) {
+        const clean = (c.phone || '').replace(/\D/g, '') || String(c.id);
+        if (!seen.has(clean)) {
+          seen.add(clean);
+          deduped.push(c);
+        }
+      }
+      setContacts(deduped);
+      setSyncStatus('synced');
     } catch (err: any) {
       console.warn('Failed to load contacts:', err);
       setFetchError(err.message || 'Unable to connect to backend server. Please try again.');
+      setSyncStatus('error');
     } finally {
       setLoading(false);
     }
@@ -64,6 +79,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
     } else {
       setContacts([]);
       setLoading(false);
+      setSyncStatus('error');
     }
   }, [user, loadContacts]);
 
@@ -87,6 +103,20 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
     setModalOpen(true);
   };
 
+  const handleSetPrimary = async (contact: EmergencyContact) => {
+    if (contact.is_primary) return;
+    try {
+      await api.updateContact(contact.id, {
+        is_primary: true,
+      });
+      setFormSuccess(`${contact.name} is now your primary contact and synced with your mobile app.`);
+      await loadContacts();
+      setTimeout(() => setFormSuccess(''), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update primary contact.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) {
@@ -105,7 +135,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
           relation: relation.trim(),
           is_primary: isPrimary,
         });
-        setFormSuccess('Contact updated successfully.');
+        setFormSuccess('Contact updated and synced with your mobile app.');
       } else {
         await api.createContact({
           name: name.trim(),
@@ -113,7 +143,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
           relation: relation.trim(),
           is_primary: isPrimary,
         });
-        setFormSuccess('Emergency contact added and synchronized with your mobile app.');
+        setFormSuccess('Emergency contact added and synced with your mobile app.');
       }
 
       await loadContacts();
@@ -127,13 +157,13 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
   };
 
   const handleDelete = async (id: number | string) => {
-    if (!window.confirm('Are you sure you want to delete this emergency contact? It will also be removed from your mobile app.')) {
+    if (!window.confirm('Are you sure you want to delete this emergency contact? It will also be removed from your cloud profile and mobile app.')) {
       return;
     }
 
     try {
       await api.deleteContact(id);
-      setFormSuccess('Contact deleted successfully.');
+      setFormSuccess('Contact deleted and synced with your mobile app.');
       await loadContacts();
       setTimeout(() => setFormSuccess(''), 4000);
     } catch (err: any) {
@@ -188,10 +218,24 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
             <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               Safety Network
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-              <ShieldCheck size={11} />
-              <span>Mobile & Cloud Synced</span>
-            </span>
+            {syncStatus === 'synced' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                <ShieldCheck size={11} />
+                <span>Synced with Mobile App</span>
+              </span>
+            )}
+            {syncStatus === 'syncing' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
+                <RefreshCw size={11} className="animate-spin" />
+                <span>Syncing...</span>
+              </span>
+            )}
+            {syncStatus === 'error' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                <AlertCircle size={11} />
+                <span>Sync Offline</span>
+              </span>
+            )}
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
             Emergency Contacts
@@ -313,23 +357,37 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
-                <button
-                  onClick={() => handleOpenEdit(contact)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Edit contact"
-                >
-                  <Edit3 size={12} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => handleDelete(contact.id)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Delete contact"
-                >
-                  <Trash2 size={12} />
-                  <span>Delete</span>
-                </button>
+              <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between gap-1.5">
+                <div>
+                  {!contact.is_primary && (
+                    <button
+                      onClick={() => handleSetPrimary(contact)}
+                      className="px-2 py-1 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10 flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Set as priority SOS recipient"
+                    >
+                      <Star size={11} />
+                      <span>Make Primary</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleOpenEdit(contact)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Edit contact"
+                  >
+                    <Edit3 size={12} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(contact.id)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Delete contact"
+                  >
+                    <Trash2 size={12} />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -58,3 +58,6 @@ firebase-credentials.json
 !frontend/public-web/index.html
 !frontend/public-web/public/*.png
 
+
+.vercel
+.env*
