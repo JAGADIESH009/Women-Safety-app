@@ -35,7 +35,7 @@ export const MobileAppShowcase: React.FC<MobileAppShowcaseProps> = ({ onExploreC
           {/* Editorial Display Heading */}
           <div className="space-y-3">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--text-primary)] leading-[1.12]">
-              Safety, always within reach.
+              Safety, Closer to You.
             </h1>
             <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed max-w-xl">
               Your trusted safety companion, designed to help you reach support when it matters.

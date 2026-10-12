@@ -1,13 +1,17 @@
 export type PageView = 
   | 'welcome'
   | 'dashboard'
+  | 'emergency'
+  | 'contacts'
+  | 'incidents'
   | 'map'
-  | 'features' 
-  | 'contacts' 
-  | 'resources' 
-  | 'profile' 
-  | 'reports' 
-  | 'privacy' 
+  | 'mobile-app'
+  | 'profile'
+  | 'settings'
+  | 'features'
+  | 'resources'
+  | 'reports'
+  | 'privacy'
   | 'terms';
 
 export interface UserProfile {

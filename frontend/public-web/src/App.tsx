@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
 import { AccountModal } from './components/AccountModal';
 
 // Primary Application Views
 import { WelcomeAuthView } from './components/WelcomeAuthView';
+import { AuthenticatedLayout } from './components/AuthenticatedLayout';
 import { WebDashboard } from './components/WebDashboard';
+import { EmergencyView } from './components/EmergencyView';
 import { FullMapPage } from './components/FullMapPage';
 import { ContactsManager } from './components/ContactsManager';
+import { IncidentReporting } from './components/IncidentReporting';
+import { AuthenticatedMobileAppShowcase } from './components/AuthenticatedMobileAppShowcase';
 import { UserProfileView } from './components/UserProfileView';
 import { SafetyResourcesView } from './components/SafetyResourcesView';
 import { LegalViews } from './components/LegalViews';
@@ -31,22 +33,24 @@ export const AppContent: React.FC = () => {
       const validAppViews: PageView[] = [
         'welcome',
         'dashboard',
-        'map',
+        'emergency',
         'contacts',
-        'resources',
+        'incidents',
+        'reports',
+        'map',
+        'mobile-app',
         'profile',
+        'settings',
+        'resources',
         'privacy',
         'terms',
       ];
 
       if (!hash || hash === 'welcome') {
-        // Root visit or explicit welcome hash
         if (user) {
-          // Returning authenticated user -> Go directly to Dashboard
           setCurrentView('dashboard');
           window.location.hash = 'dashboard';
         } else {
-          // First-visit or unauthenticated visitor -> Always show Welcome / Authentication screen
           setCurrentView('welcome');
         }
       } else if (validAppViews.includes(hash as PageView)) {
@@ -70,17 +74,19 @@ export const AppContent: React.FC = () => {
   // Loading Splash Screen
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-base)] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-2 shadow-sm mb-4 animate-pulse overflow-hidden shrink-0" style={{ width: '48px', height: '48px' }}>
-          <img src="/logo.png" alt="SafeHer" width={32} height={32} style={{ width: '32px', height: '32px', maxWidth: '32px', maxHeight: '32px' }} className="w-full h-full object-cover rounded-lg" />
+      <div className="min-h-screen bg-[#FAF7F6] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-white border border-[#EEE5E7] p-2 shadow-xs mb-4 animate-pulse overflow-hidden shrink-0 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-[#A61945] flex items-center justify-center text-white font-bold text-sm">
+            S
+          </div>
         </div>
-        <p className="text-xs font-semibold text-[var(--color-text-primary)]">SafeHer Companion</p>
-        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Initializing secure session...</p>
+        <p className="text-xs font-semibold text-[#28151D]">SafeMate</p>
+        <p className="text-[11px] text-[#81747D] mt-1">Initializing secure session...</p>
       </div>
     );
   }
 
-  // First-visit authentication / welcome flow
+  // First-visit authentication / public welcome landing flow
   if (currentView === 'welcome') {
     return (
       <>
@@ -104,6 +110,9 @@ export const AppContent: React.FC = () => {
           />
         );
 
+      case 'emergency':
+        return <EmergencyView onNavigate={navigateTo} />;
+
       case 'map':
         return <FullMapPage onNavigate={navigateTo} />;
 
@@ -115,7 +124,15 @@ export const AppContent: React.FC = () => {
           />
         );
 
+      case 'incidents':
+      case 'reports':
+        return <IncidentReporting onNavigate={navigateTo} />;
+
+      case 'mobile-app':
+        return <AuthenticatedMobileAppShowcase />;
+
       case 'profile':
+      case 'settings':
         return (
           <UserProfileView 
             onNavigate={navigateTo} 
@@ -138,21 +155,10 @@ export const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-bg-base)] text-[var(--color-text-primary)]">
-      {/* Primary Application Header */}
-      <Navbar 
-        currentView={currentView as PageView} 
-        onNavigate={navigateTo} 
-        onOpenAccountModal={() => setAccountModalOpen(true)} 
-      />
-
-      {/* Main Product Application View */}
-      <main className="flex-1">
+    <>
+      <AuthenticatedLayout currentView={currentView as PageView} onNavigate={navigateTo}>
         {renderCurrentView()}
-      </main>
-
-      {/* Application Footer */}
-      <Footer onNavigate={navigateTo} />
+      </AuthenticatedLayout>
 
       {/* Account / Guest Authentication Modal */}
       <AccountModal 
@@ -160,7 +166,7 @@ export const AppContent: React.FC = () => {
         onClose={() => setAccountModalOpen(false)} 
         onNavigate={navigateTo} 
       />
-    </div>
+    </>
   );
 };
 

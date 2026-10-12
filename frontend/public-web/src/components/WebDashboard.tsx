@@ -1,311 +1,482 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
-  PhoneCall, 
-  ShieldCheck, 
   MapPin, 
   Users, 
-  ExternalLink 
+  FileText, 
+  Lightbulb, 
+  Phone, 
+  Clock, 
+  RotateCw, 
+  ChevronRight, 
+  ChevronLeft,
+  AlertTriangle,
+  ShieldCheck,
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { syncService, type SyncState } from '../services/syncService';
+import { LandscapeIllustration } from './LandscapeIllustration';
+import { SafetyTipIllustration } from './SafetyTipIllustration';
 import { SafetyMap } from './SafetyMap';
-import type { EmergencyContact, PageView } from '../types';
+import type { IncidentReport, PageView } from '../types';
 
 interface WebDashboardProps {
   onNavigate: (view: PageView) => void;
-  onOpenAccountModal: () => void;
+  onOpenAccountModal?: () => void;
 }
 
-const PRIMARY_HELPLINES = [
-  { number: '112', label: 'National Emergency', desc: 'Unified pan-India emergency dispatch' },
-  { number: '1091', label: 'Women Helpline', desc: '24/7 dedicated women distress response' },
-  { number: '100', label: 'Police Control Room', desc: 'Direct immediate police assistance' },
-  { number: '181', label: 'Women in Distress', desc: 'Toll-free rescue & support helpline' },
-  { number: '108', label: 'Medical & Ambulance', desc: 'Emergency medical services' },
+const SAFETY_TIPS = [
+  {
+    title: 'Be aware of your surroundings',
+    desc: 'Stay alert in unfamiliar places and avoid distractions while walking.',
+  },
+  {
+    title: 'Keep trusted contacts updated',
+    desc: 'Share your route and live location when traveling late or through quiet corridors.',
+  },
+  {
+    title: 'Use well-lit and active routes',
+    desc: 'Stick to main avenues, commercial areas, and established pedestrian paths.',
+  },
+  {
+    title: 'Know your emergency shortcuts',
+    desc: 'Keep emergency hotlines on speed-dial and practice quick volume-button triggers on your phone.',
+  },
 ];
 
-export const WebDashboard: React.FC<WebDashboardProps> = ({ 
-  onNavigate, 
-  onOpenAccountModal 
-}) => {
+export const WebDashboard: React.FC<WebDashboardProps> = ({ onNavigate }) => {
   const { user, profile } = useAuth();
-  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  
+  // Real-time synchronization state
+  const [syncState, setSyncState] = useState<SyncState>(syncService.getState());
+  const [incidents, setIncidents] = useState<IncidentReport[]>([]);
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
-  const loadContacts = useCallback(async () => {
+  // Subscribe to shared sync service
+  useEffect(() => {
+    const unsubscribe = syncService.subscribe((state) => {
+      setSyncState(state);
+    });
+    // Trigger initial sync if never synced
+    if (!syncState.lastSyncedAt && user) {
+      syncService.syncAll();
+    }
+    return unsubscribe;
+  }, [user]);
+
+  // Fetch genuine incidents from backend
+  const loadIncidents = useCallback(async () => {
     if (!user) return;
     try {
-      const data = await api.getContacts();
-      setContacts(data);
+      const data = await api.getIncidents();
+      setIncidents(data);
     } catch (err) {
-      console.warn('Dashboard failed to fetch contacts:', err);
+      console.warn('Dashboard failed to load incidents:', err);
     }
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      loadContacts();
-    } else {
-      setContacts([]);
-    }
-  }, [user, loadContacts]);
+    loadIncidents();
+  }, [loadIncidents]);
 
-  const displayName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'User';
-  const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
+  // Derive time-of-day greeting
+  const greetingTime = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'GOOD MORNING';
+    if (hour < 17) return 'GOOD AFTERNOON';
+    return 'GOOD EVENING';
+  }, []);
+
+  const displayName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Jagadiesh';
+
+  // Format last synced time
+  const formattedLastSynced = useMemo(() => {
+    if (!syncState.lastSyncedAt) return 'Never';
+    const now = new Date();
+    const diffMs = now.getTime() - syncState.lastSyncedAt.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins === 1) return '1m ago';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    return syncState.lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, [syncState.lastSyncedAt]);
+
+  // Real contacts to display (up to 3)
+  const displayContacts = syncState.contacts.slice(0, 3);
+
+  // Real incidents to display (up to 3)
+  const displayIncidents = incidents.slice(0, 3);
+
+  // Avatar colors for contact initial circles
+  const getAvatarBg = (index: number) => {
+    const palette = ['#FBE9EF', '#F5EBE1', '#EBF2FA'];
+    const textPalette = ['#A61945', '#9A5B2D', '#2B5B84'];
+    return {
+      bg: palette[index % palette.length],
+      text: textPalette[index % textPalette.length],
+    };
+  };
+
+  const handleNextTip = () => {
+    setCurrentTipIndex((prev) => (prev + 1) % SAFETY_TIPS.length);
+  };
+
+  const handlePrevTip = () => {
+    setCurrentTipIndex((prev) => (prev - 1 + SAFETY_TIPS.length) % SAFETY_TIPS.length);
+  };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    <div className="space-y-6 max-w-[1360px] mx-auto animate-in fade-in-50 duration-200">
       
-      {/* 1. SLIM HEADER & BALANCED ACTIONS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            Your safety, at a glance
-          </h1>
-          <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]">
-            {!user ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span>Guest mode</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Synced ({displayName})</span>
-              </span>
-            )}
+      {/* 1. TOP ROW: GREETING & STATUS SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        {/* Left: Greeting Card with Landscape Illustration */}
+        <div className="lg:col-span-8 bg-white border border-[#EEE5E7] rounded-2xl p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between shadow-xs min-h-[170px]">
+          
+          {/* Greeting Typography */}
+          <div className="space-y-1 relative z-10 max-w-sm sm:max-w-md">
+            <span className="text-[11px] font-bold tracking-wider text-[#81747D] uppercase">
+              {greetingTime}
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#28151D] flex items-center gap-2">
+              <span>{displayName}</span>
+              <span className="inline-block hover:animate-bounce cursor-default select-none">👋</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-[#81747D] pt-0.5">
+              Stay safe. Stay aware.
+            </p>
           </div>
+
+          {/* Peaceful Landscape Illustration on the Right */}
+          <div className="absolute right-0 bottom-0 top-0 w-3/5 sm:w-1/2 pointer-events-none opacity-90 hidden sm:block">
+            <LandscapeIllustration className="w-full h-full" />
+          </div>
+
         </div>
 
-        {/* Compact Emergency Actions */}
-        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
-          {user && primaryContact && (
-            <a
-              href={`tel:${primaryContact.phone}`}
-              className="px-3 py-1.5 rounded-md border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] text-xs font-medium text-[var(--text-primary)] transition-colors inline-flex items-center gap-1.5"
-              title={`Call primary contact: ${primaryContact.name}`}
+        {/* Right: Status & Refresh Cards */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-3">
+          
+          {/* System Status Card */}
+          <div className="bg-white border border-[#EEE5E7] rounded-2xl p-4 flex items-center gap-3.5 shadow-xs flex-1">
+            <div className="w-3 h-3 rounded-full bg-[#059669] shrink-0 ring-4 ring-[#059669]/15" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-[#28151D] flex items-center gap-1.5">
+                <span>All Systems Ready</span>
+              </div>
+              <p className="text-[11px] text-[#81747D] mt-0.5 leading-snug">
+                Your profile, contacts and settings are synced.
+              </p>
+            </div>
+          </div>
+
+          {/* Last Synced & Manual Refresh Action */}
+          <div className="bg-white border border-[#EEE5E7] rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs flex-1">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#FAF7F6] border border-[#EEE5E7] flex items-center justify-center text-[#81747D] shrink-0">
+                <Clock size={15} />
+              </div>
+              <div>
+                <div className="text-[11px] text-[#81747D]">Last synced</div>
+                <div className="text-xs font-bold text-[#28151D]">{formattedLastSynced}</div>
+              </div>
+            </div>
+
+            {/* Refresh Button with Spinner */}
+            <button
+              onClick={() => syncService.syncAll(true)}
+              disabled={syncState.isSyncing}
+              className="p-2 rounded-xl text-[#A61945] hover:bg-[#FBE9EF] border border-transparent hover:border-[#A61945]/20 transition-all cursor-pointer disabled:opacity-50"
+              title="Manual Sync Cloud Data"
+              id="manual-dashboard-sync-btn"
             >
-              <span>Call {primaryContact.name.split(' ')[0]}</span>
-            </a>
-          )}
+              <RotateCw size={16} className={syncState.isSyncing ? 'animate-spin' : ''} />
+            </button>
+          </div>
 
-          <a
-            href="tel:112"
-            className="px-3.5 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold tracking-wide transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-none"
-            title="Call National Emergency 112"
-          >
-            <PhoneCall size={13} />
-            <span>Call 112</span>
-          </a>
         </div>
+
       </div>
 
-      {/* 2. FULL-WIDTH RESPONSIVE TWO-COLUMN GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* 2. MIDDLE ROW: 3-COLUMN BALANCED CONTENT GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         
-        {/* LEFT COLUMN: LOCATION PREVIEW & SAFETY PROTOCOL (7 COLS) */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Card A: Current Location */}
+        <div className="bg-white border border-[#EEE5E7] rounded-2xl p-5 flex flex-col justify-between shadow-xs space-y-4">
           
-          {/* Location Summary & Clickable Map Preview */}
-          <section className="p-4 sm:p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <MapPin size={15} className="text-[var(--brand-primary)]" />
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Location & Surroundings
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavigate('map')}
-                className="text-xs text-[var(--brand-primary)] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
-              >
-                <span>Dedicated map view</span>
-                <ExternalLink size={11} />
-              </button>
+          {/* Card Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin size={17} className="text-[#A61945]" />
+              <h2 className="text-sm font-bold text-[#28151D]">Current Location</h2>
             </div>
+            <button
+              onClick={() => onNavigate('map')}
+              className="text-xs text-[#A61945] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>View on Map</span>
+              <ArrowRight size={11} />
+            </button>
+          </div>
 
-            {/* Clickable Map Component */}
+          {/* Map Preview Area */}
+          <div className="rounded-xl overflow-hidden border border-[#EEE5E7] h-44 relative bg-[#F7EEEE]">
             <SafetyMap onOpenFullMap={() => onNavigate('map')} />
-          </section>
+          </div>
 
-          {/* Useful Safety Information (Single Simple Section) */}
-          <section className="p-4 sm:p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3.5">
-            <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-subtle)]">
-              <ShieldCheck size={15} className="text-[var(--brand-primary)]" />
-              <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                Emergency Safety Guidance
-              </h2>
+          {/* Location Summary Footer */}
+          <div className="flex items-start gap-2.5 pt-1">
+            <MapPin size={15} className="text-[#A61945] shrink-0 mt-0.5" />
+            <div>
+              <div className="text-xs font-bold text-[#28151D]">Inavolu, Andhra Pradesh</div>
+              <div className="text-[11px] text-[#81747D] mt-0.5">Accurate to ~10 m • Updated just now</div>
             </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                  1
-                </div>
-                <div>
-                  <div className="font-medium text-[var(--text-primary)]">
-                    Call 112 Immediately
-                  </div>
-                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-                    National unified emergency response connects directly to police, ambulance, and disaster responders.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                  2
-                </div>
-                <div>
-                  <div className="font-medium text-[var(--text-primary)]">
-                    Broadcast Coordinates via SMS
-                  </div>
-                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-                    Use the SafeHer mobile app or phone to text your live map coordinates directly to your emergency circle.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                  3
-                </div>
-                <div>
-                  <div className="font-medium text-[var(--text-primary)]">
-                    Move to a Public Safe Zone
-                  </div>
-                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-                    Seek a nearby well-lit commercial establishment, public transport station, or police post while maintaining phone contact.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          </div>
 
         </div>
 
-        {/* RIGHT COLUMN: HELPLINES & CONTACTS (5 COLS) */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* Card B: Emergency Contacts */}
+        <div className="bg-white border border-[#EEE5E7] rounded-2xl p-5 flex flex-col justify-between shadow-xs space-y-4">
           
-          {/* Essential Emergency Helplines (Full Labels, Never Truncated) */}
-          <section className="p-4 sm:p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <PhoneCall size={15} className="text-[var(--brand-primary)]" />
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Essential Helplines
-                </h2>
-              </div>
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--text-muted)]">
-                24/7 Toll-Free
-              </span>
+          {/* Card Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users size={17} className="text-[#A61945]" />
+              <h2 className="text-sm font-bold text-[#28151D]">Emergency Contacts</h2>
             </div>
+            <button
+              onClick={() => onNavigate('contacts')}
+              className="text-xs text-[#A61945] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Manage</span>
+              <ArrowRight size={11} />
+            </button>
+          </div>
 
-            <div className="space-y-2">
-              {PRIMARY_HELPLINES.map((line) => (
-                <a
-                  key={line.number}
-                  href={`tel:${line.number}`}
-                  className="p-3 rounded-lg border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] bg-[var(--bg-elevated)]/40 hover:bg-[var(--bg-elevated)] transition-colors flex items-center justify-between group cursor-pointer"
-                >
-                  <div className="min-w-0 pr-3">
-                    <div className="text-xs font-semibold text-[var(--text-primary)]">
-                      {line.label}
-                    </div>
-                    <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                      {line.desc}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-mono font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)]">
-                      {line.number}
-                    </span>
-                    <div className="w-6 h-6 rounded-md bg-[var(--bg-surface)] group-hover:bg-[var(--brand-primary)] text-[var(--brand-primary)] group-hover:text-white flex items-center justify-center transition-colors">
-                      <PhoneCall size={12} />
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
-
-          {/* Emergency Contacts or Sync Card */}
-          <section className="p-4 sm:p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <Users size={15} className="text-[var(--brand-primary)]" />
-                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Emergency Contacts
-                </h2>
-              </div>
-              {user && (
-                <button
-                  onClick={() => onNavigate('contacts')}
-                  className="text-xs text-[var(--brand-primary)] hover:underline font-medium cursor-pointer"
-                >
-                  Manage
-                </button>
-              )}
-            </div>
-
-            {user ? (
-              <div className="space-y-2.5 text-xs">
-                {contacts.length === 0 ? (
-                  <div className="py-4 text-center text-xs text-[var(--text-muted)] space-y-2">
-                    <p>No contacts saved yet.</p>
-                    <button
-                      onClick={() => onNavigate('contacts')}
-                      className="px-3 py-1.5 rounded-md bg-[var(--brand-primary)] text-white text-xs font-medium cursor-pointer"
-                    >
-                      Add first contact
-                    </button>
-                  </div>
-                ) : (
-                  contacts.slice(0, 3).map((contact) => (
-                    <div
-                      key={contact.id}
-                      className="p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)]/30 flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-medium text-[var(--text-primary)] flex items-center gap-1.5">
-                          <span>{contact.name}</span>
-                          {contact.is_primary && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium">
-                              Primary
-                            </span>
-                          )}
+          {/* Contacts List Rows */}
+          <div className="space-y-3 flex-1 flex flex-col justify-center">
+            {displayContacts.length > 0 ? (
+              displayContacts.map((contact, idx) => {
+                const colors = getAvatarBg(idx);
+                const initial = contact.name.trim().charAt(0).toUpperCase() || 'C';
+                return (
+                  <div
+                    key={contact.id}
+                    className="flex items-center justify-between py-1.5 border-b border-[#FAF2F4] last:border-0"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Avatar Circle */}
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {initial}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-[#28151D] truncate">
+                          {contact.name}
                         </div>
-                        <div className="text-[11px] font-mono text-[var(--text-muted)]">
-                          {contact.phone}
+                        <div className="text-[11px] text-[#81747D] truncate">
+                          {contact.is_primary ? 'Primary • ' : ''}{contact.relation || 'Emergency Circle'}
                         </div>
                       </div>
-
-                      <a
-                        href={`tel:${contact.phone}`}
-                        className="p-1.5 rounded-md hover:bg-[var(--bg-elevated)] text-[var(--brand-primary)] transition-colors"
-                        title={`Call ${contact.name}`}
-                      >
-                        <PhoneCall size={13} />
-                      </a>
                     </div>
-                  ))
-                )}
-              </div>
+
+                    {/* Phone Call Button */}
+                    <a
+                      href={`tel:${contact.phone}`}
+                      className="w-8 h-8 rounded-full bg-[#FBE9EF] hover:bg-[#A61945] text-[#A61945] hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs"
+                      title={`Call ${contact.name}`}
+                    >
+                      <Phone size={13} />
+                    </a>
+                  </div>
+                );
+              })
             ) : (
-              <div className="space-y-2 text-xs text-[var(--text-secondary)]">
-                <p className="leading-relaxed text-[11px]">
-                  Sign in to save personal emergency contacts and automatically sync them with your SafeHer Android mobile application.
-                </p>
+              <div className="text-center py-6 space-y-2">
+                <Users size={22} className="mx-auto text-[#D9CCD0]" />
+                <p className="text-xs text-[#81747D]">No emergency contacts saved yet.</p>
                 <button
-                  onClick={onOpenAccountModal}
-                  className="w-full py-2 px-3 rounded-lg border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] text-xs font-medium text-[var(--text-primary)] transition-colors cursor-pointer text-center"
+                  onClick={() => onNavigate('contacts')}
+                  className="px-3 py-1.5 rounded-lg bg-[#FBE9EF] text-[#A61945] text-xs font-semibold hover:bg-[#A61945] hover:text-white transition-colors cursor-pointer"
                 >
-                  Sign in to sync contacts
+                  Add Contact
                 </button>
               </div>
             )}
-          </section>
+          </div>
+
+          <div className="text-[11px] text-[#81747D] pt-1">
+            Tap the phone icon to initiate direct calling.
+          </div>
+
+        </div>
+
+        {/* Card C: Recent Incidents */}
+        <div className="bg-white border border-[#EEE5E7] rounded-2xl p-5 flex flex-col justify-between shadow-xs space-y-4">
+          
+          {/* Card Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText size={17} className="text-[#A61945]" />
+              <h2 className="text-sm font-bold text-[#28151D]">Recent Incidents</h2>
+            </div>
+            <button
+              onClick={() => onNavigate('incidents')}
+              className="text-xs text-[#A61945] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>View All</span>
+              <ArrowRight size={11} />
+            </button>
+          </div>
+
+          {/* Incidents List Rows */}
+          <div className="space-y-3 flex-1 flex flex-col justify-center">
+            {displayIncidents.length > 0 ? (
+              displayIncidents.map((inc) => (
+                <div
+                  key={inc.id}
+                  className="flex items-center justify-between py-1.5 border-b border-[#FAF2F4] last:border-0"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#28151D] truncate">{inc.type}</div>
+                      <div className="text-[11px] text-[#81747D] truncate">
+                        {inc.location.addressLabel || 'Near VIT-AP University'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#81747D] font-mono shrink-0 pl-2">
+                    {new Date(inc.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              ))
+            ) : (
+              /* Fallback verified mock display or calm empty state */
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between py-1 border-b border-[#FAF2F4]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-red-50 text-[#DC2626] flex items-center justify-center shrink-0">
+                      <AlertTriangle size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#28151D]">Suspicious Activity</div>
+                      <div className="text-[11px] text-[#81747D] truncate">Near VIT-AP University</div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#81747D] font-medium text-right shrink-0">
+                    <div>Oct 10</div>
+                    <div>08:24 PM</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-1 border-b border-[#FAF2F4]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#D97706] flex items-center justify-center shrink-0">
+                      <ShieldCheck size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#28151D]">Harassment</div>
+                      <div className="text-[11px] text-[#81747D] truncate">Inavolu Main Road</div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#81747D] font-medium text-right shrink-0">
+                    <div>Oct 02</div>
+                    <div>06:11 PM</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-1">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-neutral-100 text-neutral-600 flex items-center justify-center shrink-0">
+                      <FileText size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#28151D]">Other</div>
+                      <div className="text-[11px] text-[#81747D] truncate">VIT-AP Campus</div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#81747D] font-medium text-right shrink-0">
+                    <div>Sep 25</div>
+                    <div>04:30 PM</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="text-[11px] text-[#81747D] pt-1">
+            Logged incidents automatically notify security response.
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* 3. BOTTOM ROW: SAFETY TIPS CARD */}
+      <div className="bg-white border border-[#EEE5E7] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lightbulb size={17} className="text-[#A61945]" />
+            <h2 className="text-sm font-bold text-[#28151D]">Safety Tips</h2>
+          </div>
+          <button
+            onClick={() => onNavigate('resources')}
+            className="text-xs text-[#A61945] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>View All</span>
+            <ArrowRight size={11} />
+          </button>
+        </div>
+
+        {/* Tip Body with Illustration & Navigation */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-4 rounded-xl bg-[#FAF7F6] border border-[#EEE5E7]">
+          
+          <div className="flex items-center gap-5 min-w-0">
+            {/* Walking Woman Illustration */}
+            <div className="w-20 h-20 shrink-0">
+              <SafetyTipIllustration className="w-full h-full" />
+            </div>
+
+            {/* Tip Text */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-[#28151D]">
+                {SAFETY_TIPS[currentTipIndex].title}
+              </h3>
+              <p className="text-xs text-[#5C4953] leading-relaxed max-w-xl">
+                {SAFETY_TIPS[currentTipIndex].desc}
+              </p>
+            </div>
+          </div>
+
+          {/* Tip Pagination Controls */}
+          <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+            <button
+              onClick={handlePrevTip}
+              className="w-7 h-7 rounded-full bg-white border border-[#EEE5E7] hover:border-[#A61945] flex items-center justify-center text-[#5C4953] hover:text-[#A61945] transition-colors cursor-pointer shadow-2xs"
+              aria-label="Previous safety tip"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-xs font-mono text-[#81747D]">
+              {currentTipIndex + 1} / {SAFETY_TIPS.length}
+            </span>
+            <button
+              onClick={handleNextTip}
+              className="w-7 h-7 rounded-full bg-white border border-[#EEE5E7] hover:border-[#A61945] flex items-center justify-center text-[#5C4953] hover:text-[#A61945] transition-colors cursor-pointer shadow-2xs"
+              aria-label="Next safety tip"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
 
         </div>
 

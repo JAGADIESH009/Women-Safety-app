@@ -9,9 +9,11 @@ import {
   LogIn,
   LogOut,
   ShieldCheck,
-  Fingerprint
+  Fingerprint,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { syncService } from '../services/syncService';
 import type { PageView } from '../types';
 
 interface UserProfileViewProps {
@@ -133,13 +135,25 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleSignOut}
-          className="px-3.5 py-2 rounded-xl border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto cursor-pointer"
-        >
-          <LogOut size={14} />
-          <span>Sign Out</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => syncService.syncAll(true)}
+            className="p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-text-primary)] transition-all cursor-pointer shadow-xs"
+            title="Refresh profile from cloud"
+            aria-label="Refresh profile from cloud"
+            id="manual-profile-sync-btn"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="px-3.5 py-2 rounded-xl border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <LogOut size={14} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Notifications */}

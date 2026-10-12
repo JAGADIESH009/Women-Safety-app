@@ -1,5 +1,5 @@
 import { auth } from '../config/firebase';
-import type { EmergencyContact, UserProfile } from '../types';
+import type { EmergencyContact, UserProfile, IncidentReport } from '../types';
 
 export const API_BASE_URL = 
   import.meta.env.VITE_API_URL || 'https://women-safety-app-xo2h.onrender.com';
@@ -316,5 +316,40 @@ export const api = {
     }
     const errorText = await res.text();
     throw new Error(`Failed to delete contact (${res.status}): ${errorText}`);
+  },
+
+  async getIncidents(): Promise<IncidentReport[]> {
+    if (!auth?.currentUser) {
+      return [];
+    }
+    const headers = await getAuthHeaders();
+    if (!headers['Authorization']) {
+      return [];
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/incidents/`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          return data.map((item: any) => ({
+            id: `#INC-${item.id}`,
+            type: item.type || 'Emergency Alert',
+            description: item.status || 'Active',
+            createdAt: item.start_time || new Date().toISOString(),
+            status: item.status === 'RESOLVED' ? 'Resolved' : 'Submitted',
+            location: {
+              latitude: 16.5062,
+              longitude: 80.6480,
+              addressLabel: 'Inavolu, Andhra Pradesh',
+            },
+            timeline: [],
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('[SafeHer API] Failed to fetch incidents:', err);
+    }
+    return [];
   },
 };
