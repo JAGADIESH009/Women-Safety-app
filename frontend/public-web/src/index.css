@@ -176,3 +176,10 @@
   border-radius: 8px;
   flex-shrink: 0;
 }
+
+/* Leaflet OpenStreetMap Dark Mode Tile Inversion (Admin Panel Parity) */
+[data-theme="dark"] .leaflet-tile,
+.dark .leaflet-tile {
+  filter: brightness(0.82) invert(1) contrast(1.15) hue-rotate(205deg) saturate(0.65);
+}
+

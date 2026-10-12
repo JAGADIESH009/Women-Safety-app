@@ -1,22 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  PhoneCall, 
-  ArrowRight, 
-  Users, 
-  Smartphone, 
-  PlusCircle, 
-  RefreshCw, 
-  Star, 
-  Phone, 
-  AlertCircle,
-  BookOpen,
-  User as UserIcon,
-  ShieldAlert,
-  Radio
-} from 'lucide-react';
+import { PhoneCall } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { APP_CONFIG } from '../config/appConfig';
 import { SafetyMap } from './SafetyMap';
 import type { EmergencyContact, PageView } from '../types';
 
@@ -25,11 +10,10 @@ interface WebDashboardProps {
   onOpenAccountModal: () => void;
 }
 
-// 4 Primary Scannable Emergency Helplines
 const PRIMARY_HELPLINES = [
   { number: '112', label: 'National Emergency' },
   { number: '1091', label: 'Women Helpline' },
-  { number: '100', label: 'Police Control' },
+  { number: '100', label: 'Police' },
   { number: '181', label: 'Women in Distress' },
 ];
 
@@ -38,24 +22,15 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
   onOpenAccountModal 
 }) => {
   const { user, profile } = useAuth();
-  
-  // Real backend contacts state (authenticated only)
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(false);
-  const [contactError, setContactError] = useState<string | null>(null);
 
   const loadContacts = useCallback(async () => {
     if (!user) return;
-    setLoadingContacts(true);
-    setContactError(null);
     try {
       const data = await api.getContacts();
       setContacts(data);
     } catch (err) {
       console.warn('Dashboard failed to fetch contacts:', err);
-      setContactError('Unable to load contacts. Check network connection.');
-    } finally {
-      setLoadingContacts(false);
     }
   }, [user]);
 
@@ -64,7 +39,6 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
       loadContacts();
     } else {
       setContacts([]);
-      setContactError(null);
     }
   }, [user, loadContacts]);
 
@@ -72,325 +46,109 @@ export const WebDashboard: React.FC<WebDashboardProps> = ({
   const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 animate-fade-in">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       
-      {/* 1. COMPACT PAGE HEADING (Your safety, at a glance) */}
-      <section className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
+      {/* 1. CLEAN COMPACT HEADING & EMERGENCY ACTION */}
+      <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-              Your safety, at a glance
-            </h1>
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+            Your safety, at a glance
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-[var(--text-muted)]">
             {!user ? (
-              <span className="text-[10px] font-medium text-[var(--text-muted)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)]/60">
-                Guest mode
-              </span>
+              <span>Guest mode</span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Synced ({displayName})</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                Synced ({displayName})
               </span>
             )}
           </div>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Real-time verified location, direct emergency responders, and official safety helplines.
-          </p>
         </div>
 
-        {user && (
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-            <button
-              onClick={() => onNavigate('contacts')}
-              className="px-3 py-1.5 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              <PlusCircle size={13} />
-              <span>Add contact</span>
-            </button>
-            <button
-              onClick={loadContacts}
-              disabled={loadingContacts}
-              className="p-1.5 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              title="Refresh contacts"
-              aria-label="Refresh contacts"
-            >
-              <RefreshCw size={13} className={loadingContacts ? 'animate-spin' : ''} />
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* 2. PROMINENT BUT TASTEFUL EMERGENCY ACTION (Honest direct-dial action) */}
-      <section className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-surface)] border border-red-500/25 dark:border-red-500/35 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-center shrink-0">
-            <Radio size={16} className="animate-pulse" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2">
-              <span>Direct Emergency Dispatch</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/10 text-red-600 dark:text-red-400 font-semibold">
-                Toll-Free 24/7
-              </span>
-            </div>
-            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-              Immediate connection to national police, medical, and fire emergency authority.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Compact Emergency-Help Action */}
+        <div className="flex items-center gap-2">
           <a
             href="tel:112"
-            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs active:scale-[0.98]"
+            className="px-3.5 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold tracking-wide transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-none"
+            title="Call National Emergency 112"
           >
-            <PhoneCall size={14} />
-            <span>Call 112 Immediately</span>
+            <PhoneCall size={13} />
+            <span>Call 112</span>
           </a>
-
-          {user && primaryContact && (
-            <a
-              href={`tel:${primaryContact.phone}`}
-              className="hidden sm:inline-flex px-3 py-2 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium text-xs items-center gap-1.5 transition-colors"
-              title={`Call primary contact: ${primaryContact.name}`}
-            >
-              <Phone size={13} className="text-[var(--brand-primary)]" />
-              <span>Call {primaryContact.name.split(' ')[0]}</span>
-            </a>
-          )}
         </div>
-      </section>
+      </div>
 
-      {/* 3. INTERACTIVE LOCATION & SURROUNDINGS MAP */}
+      {/* 2. COMPACT LOCATION AREA (REAL MAP) */}
       <section>
         <SafetyMap />
       </section>
 
-      {/* 4. EMERGENCY HELPLINES (Compact Secondary Section) */}
-      <section className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldAlert size={14} className="text-[var(--brand-primary)]" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-              Emergency Helplines
-            </h2>
-          </div>
-          <button
-            onClick={() => onNavigate('resources')}
-            className="text-xs text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors inline-flex items-center gap-1 cursor-pointer"
-          >
-            <span>View all helplines</span>
-            <ArrowRight size={11} />
-          </button>
+      {/* 3. ESSENTIAL EMERGENCY HELPLINES (UNOBTRUSIVE LIST) */}
+      <section className="pt-2 border-t border-[var(--border-subtle)] space-y-2.5">
+        <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+          Essential Helplines
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {PRIMARY_HELPLINES.map((line) => (
             <a
               key={line.number}
               href={`tel:${line.number}`}
-              className="group p-3.5 sm:p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] transition-all flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] shadow-2xs"
+              className="py-2 px-2.5 rounded-lg border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] transition-colors flex items-center justify-between group"
             >
-              <div className="min-w-0">
-                <div className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors tabular-nums">
-                  {line.number}
-                </div>
-                <div className="text-[11px] font-medium text-[var(--text-secondary)] mt-0.5 truncate">
-                  {line.label}
-                </div>
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] group-hover:bg-[var(--brand-primary)] text-[var(--brand-primary)] group-hover:text-white flex items-center justify-center transition-colors shrink-0 ml-2">
-                <PhoneCall size={14} />
-              </div>
+              <span className="text-xs text-[var(--text-secondary)] truncate mr-1">
+                {line.label}
+              </span>
+              <span className="text-xs font-mono font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] shrink-0">
+                {line.number}
+              </span>
             </a>
           ))}
         </div>
       </section>
 
-      {/* 5. GUEST INLINE SYNC NOTICE OR AUTHENTICATED CONTACTS CIRCLE */}
-      {!user ? (
-        <section className="py-2.5 px-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-          <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-            <Users size={14} className="text-[var(--brand-primary)] shrink-0" />
-            <span>Sign in to store emergency contacts and sync them with the SafeHer Android app.</span>
-          </div>
-          <button
-            onClick={onOpenAccountModal}
-            className="text-xs font-semibold text-[var(--brand-primary)] hover:underline inline-flex items-center gap-1 shrink-0 self-start sm:self-auto cursor-pointer"
-          >
-            <span>Sign in to sync contacts</span>
-            <ArrowRight size={12} />
-          </button>
-        </section>
-      ) : (
-        <section className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users size={14} className="text-[var(--brand-primary)]" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                Emergency Contacts ({contacts.length})
-              </h2>
+      {/* 4. USER CONTACT OR GUEST SYNC NOTICE */}
+      <section className="pt-2 border-t border-[var(--border-subtle)]">
+        {user ? (
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+            <div className="flex items-center gap-2 truncate">
+              {primaryContact ? (
+                <span>
+                  Primary contact: <strong className="text-[var(--text-primary)]">{primaryContact.name}</strong> ({primaryContact.phone})
+                </span>
+              ) : (
+                <span>No emergency contacts saved yet</span>
+              )}
             </div>
-            <button
-              onClick={() => onNavigate('contacts')}
-              className="text-xs text-[var(--text-secondary)] hover:text-[var(--brand-primary)] transition-colors inline-flex items-center gap-1 cursor-pointer"
-            >
-              <span>Manage contacts</span>
-              <ArrowRight size={11} />
-            </button>
-          </div>
 
-          {loadingContacts ? (
-            <div className="py-6 text-center text-xs text-[var(--text-muted)] space-y-2">
-              <div className="w-4 h-4 border-2 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p>Loading emergency circle...</p>
-            </div>
-          ) : contactError ? (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle size={14} />
-                <span>{contactError}</span>
-              </div>
-              <button onClick={loadContacts} className="font-semibold underline ml-2 cursor-pointer">
-                Retry
-              </button>
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="p-5 text-center rounded-xl bg-[var(--bg-surface)] border border-dashed border-[var(--border-medium)] space-y-2">
-              <p className="text-xs font-semibold text-[var(--text-primary)]">No contacts saved yet</p>
-              <p className="text-[11px] text-[var(--text-secondary)] max-w-sm mx-auto">
-                Add trusted family members or friends to receive emergency alerts from your Android device.
-              </p>
+            <div className="flex items-center gap-2 shrink-0">
+              {primaryContact && (
+                <a
+                  href={`tel:${primaryContact.phone}`}
+                  className="font-medium text-[var(--brand-primary)] hover:underline"
+                >
+                  Call
+                </a>
+              )}
               <button
                 onClick={() => onNavigate('contacts')}
-                className="mt-1 px-3 py-1.5 rounded-lg bg-[var(--brand-primary)] text-white text-xs font-medium cursor-pointer inline-flex items-center gap-1.5"
+                className="font-medium text-[var(--brand-primary)] hover:underline cursor-pointer"
               >
-                <PlusCircle size={13} />
-                <span>Add first contact</span>
+                Manage
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {primaryContact && (
-                <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between">
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-[var(--text-primary)] truncate">
-                        {primaryContact.name}
-                      </span>
-                      <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.2 rounded">
-                        <Star size={8} fill="currentColor" />
-                        <span>Primary</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-mono tabular-nums text-[var(--brand-primary)] font-semibold">
-                      {primaryContact.phone}
-                    </div>
-                  </div>
-                  <a
-                    href={`tel:${primaryContact.phone}`}
-                    className="w-7 h-7 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--brand-primary)] hover:text-white text-[var(--text-secondary)] flex items-center justify-center transition-colors shrink-0 ml-2"
-                    title={`Call ${primaryContact.name}`}
-                  >
-                    <Phone size={13} />
-                  </a>
-                </div>
-              )}
-
-              {contacts.filter(c => c.id !== primaryContact?.id).slice(0, 2).map((c) => (
-                <div key={c.id} className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between">
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
-                      {c.name}
-                    </div>
-                    <div className="text-xs font-mono tabular-nums text-[var(--text-secondary)]">
-                      {c.phone}
-                    </div>
-                  </div>
-                  <a
-                    href={`tel:${c.phone}`}
-                    className="w-7 h-7 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--brand-primary)] hover:text-white text-[var(--text-secondary)] flex items-center justify-center transition-colors shrink-0 ml-2"
-                    title={`Call ${c.name}`}
-                  >
-                    <Phone size={13} />
-                  </a>
-                </div>
-              ))}
-
-              {contacts.length > 3 && (
-                <button
-                  onClick={() => onNavigate('contacts')}
-                  className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-dashed border-[var(--border-medium)] hover:border-[var(--brand-primary)] text-center text-xs font-medium text-[var(--brand-primary)] transition-colors cursor-pointer flex items-center justify-center gap-1"
-                >
-                  <span>+{contacts.length - 3} more contacts</span>
-                  <ArrowRight size={11} />
-                </button>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 6. ESSENTIAL DISCOVERY & ANDROID COMPANION STRIP */}
-      <section className="space-y-3 pt-2">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          <button
-            onClick={() => onNavigate('contacts')}
-            className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] text-left transition-colors cursor-pointer group flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2.5">
-              <Users size={15} className="text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] transition-colors" />
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">Contacts</div>
-                <div className="text-[11px] text-[var(--text-muted)]">Manage emergency recipients</div>
-              </div>
-            </div>
-            <ArrowRight size={12} className="text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] group-hover:translate-x-0.5 transition-all" />
-          </button>
-
-          <button
-            onClick={() => onNavigate('resources')}
-            className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] text-left transition-colors cursor-pointer group flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2.5">
-              <BookOpen size={15} className="text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] transition-colors" />
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">Protocols</div>
-                <div className="text-[11px] text-[var(--text-muted)]">Field guides & safety rules</div>
-              </div>
-            </div>
-            <ArrowRight size={12} className="text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] group-hover:translate-x-0.5 transition-all" />
-          </button>
-
-          <button
-            onClick={() => onNavigate('profile')}
-            className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] text-left transition-colors cursor-pointer group flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2.5">
-              <UserIcon size={15} className="text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] transition-colors" />
-              <div>
-                <div className="text-xs font-semibold text-[var(--text-primary)]">Profile</div>
-                <div className="text-[11px] text-[var(--text-muted)]">Medical data & security</div>
-              </div>
-            </div>
-            <ArrowRight size={12} className="text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] group-hover:translate-x-0.5 transition-all" />
-          </button>
-        </div>
-
-        {/* Small Inline Android App Notice */}
-        <div className="py-2.5 px-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[var(--text-secondary)]">
-          <div className="flex items-center gap-2">
-            <Smartphone size={14} className="text-[var(--text-muted)] shrink-0" />
-            <span>SafeHer Android app enables volume button hardware triggers & siren.</span>
           </div>
-          <a
-            href={APP_CONFIG.apkDownloadUrl}
-            download={APP_CONFIG.apkFilename}
-            className="font-medium text-[var(--brand-primary)] hover:underline inline-flex items-center gap-1 shrink-0 self-start sm:self-auto cursor-pointer"
-          >
-            <span>Download APK</span>
-            <ArrowRight size={11} />
-          </a>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+            <span>Sign in to save and sync contacts with the mobile app</span>
+            <button
+              onClick={onOpenAccountModal}
+              className="font-medium text-[var(--brand-primary)] hover:underline cursor-pointer"
+            >
+              Sign in
+            </button>
+          </div>
+        )}
       </section>
 
     </div>
