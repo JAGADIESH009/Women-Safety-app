@@ -11,7 +11,7 @@ Before EVERY implementation, debugging, refactoring, UI change, or testing task:
 5. Do not rewrite working parts unless the task requires it.
 
 ## Core Skills Priority
-- **UI / DESIGN**: `design-taste-frontend`, `design-md`, `web-design-guidelines`, `redesign-existing-projects`
+- **UI / DESIGN**: `high-end-visual-design`, `design-taste-frontend`, `minimalist-ui`, `web-design-guidelines`, `design-md`, `redesign-existing-projects` (governed by `.agents/rules/frontend_design_workflow.md`)
 - **REACT NATIVE / EXPO**: `vercel-react-native-skills`
 - **WEB TESTING**: `playwright-cli`
 - **COMPLEX IMPLEMENTATIONS**: `full-output-enforcement`

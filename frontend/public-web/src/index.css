@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --color-brand-primary: var(--brand-primary);
@@ -30,26 +30,26 @@
 }
 
 :root {
-  /* Default: Warm Cream / Deep Burgundy Luxury Consumer Experience */
-  --bg-base: #FFFDF9;
+  /* Minimalist Luxury: Warm Bone Canvas / Pure White Surfaces / Deep Burgundy Accent */
+  --bg-base: #FAF9F6;
   --bg-surface: #FFFFFF;
-  --bg-elevated: #F7F3EB;
-  --bg-hover: #EFE9DD;
+  --bg-elevated: #F3F1EC;
+  --bg-hover: #ECE8E1;
 
-  --text-primary: #2A161A;
-  --text-secondary: #5E4A4D;
-  --text-muted: #8C777A;
+  --text-primary: #181416;
+  --text-secondary: #5C5558;
+  --text-muted: #8E8689;
 
-  --border-subtle: #E8DDD9;
-  --border-medium: #D4C4BF;
+  --border-subtle: rgba(24, 20, 22, 0.08);
+  --border-medium: rgba(24, 20, 22, 0.15);
 
   --brand-primary: #780D2B;
-  --brand-hover: #8E1235;
-  --brand-subtle: rgba(120, 13, 43, 0.08);
-  --brand-border: rgba(120, 13, 43, 0.22);
+  --brand-hover: #600921;
+  --brand-subtle: rgba(120, 13, 43, 0.06);
+  --brand-border: rgba(120, 13, 43, 0.18);
   --rose-accent: #B23A5B;
 
-  /* Aliases for universal component compatibility */
+  /* Universal compatibility tokens */
   --color-bg: var(--bg-base);
   --color-bg-base: var(--bg-base);
   --color-surface: var(--bg-surface);
@@ -65,38 +65,38 @@
   --color-primary-subtle: var(--brand-subtle);
   --color-secondary: var(--rose-accent);
 
-  --status-emergency: #E11D48;
-  --status-emergency-bg: rgba(225, 29, 72, 0.08);
+  --status-emergency: #DC2626;
+  --status-emergency-bg: rgba(220, 38, 38, 0.08);
   --status-warning: #D97706;
   --status-warning-bg: rgba(217, 119, 6, 0.08);
   --status-success: #059669;
   --status-success-bg: rgba(5, 150, 105, 0.08);
 
-  --shadow-card: 0 2px 10px -2px rgba(42, 22, 26, 0.05), 0 1px 3px -1px rgba(42, 22, 26, 0.03);
-  --shadow-elevated: 0 16px 36px -6px rgba(42, 22, 26, 0.09), 0 4px 10px -2px rgba(42, 22, 26, 0.04);
+  --shadow-card: 0 1px 2px rgba(24, 20, 22, 0.04), 0 2px 6px rgba(24, 20, 22, 0.02);
+  --shadow-elevated: 0 4px 16px -2px rgba(24, 20, 22, 0.08), 0 2px 6px -1px rgba(24, 20, 22, 0.03);
 }
 
 [data-theme="dark"], .dark {
-  /* Signature Wine-Black / Rose */
-  --bg-base: #140A0D;
-  --bg-surface: #1E1015;
-  --bg-elevated: #28161D;
-  --bg-hover: #331D25;
+  /* Minimalist Luxury Dark: Signature OLED Wine-Black / Rose Burgundy Accent */
+  --bg-base: #0D090B;
+  --bg-surface: #140E11;
+  --bg-elevated: #1C1317;
+  --bg-hover: #261A20;
 
-  --text-primary: #FDFBF7;
-  --text-secondary: #E2D5D8;
-  --text-muted: #9E898F;
+  --text-primary: #FAF7F8;
+  --text-secondary: #BDB4B7;
+  --text-muted: #7E7377;
 
-  --border-subtle: #361F26;
-  --border-medium: #4B2B35;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
 
-  --brand-primary: #B23A5B;
-  --brand-hover: #C54368;
-  --brand-subtle: rgba(178, 58, 91, 0.16);
-  --brand-border: rgba(178, 58, 91, 0.35);
+  --brand-primary: #C74468;
+  --brand-hover: #DB5479;
+  --brand-subtle: rgba(199, 68, 104, 0.12);
+  --brand-border: rgba(199, 68, 104, 0.28);
   --rose-accent: #E06085;
 
-  /* Aliases for universal component compatibility */
+  /* Universal compatibility tokens */
   --color-bg: var(--bg-base);
   --color-bg-base: var(--bg-base);
   --color-surface: var(--bg-surface);
@@ -113,14 +113,14 @@
   --color-secondary: var(--rose-accent);
 
   --status-emergency: #F43F5E;
-  --status-emergency-bg: rgba(244, 63, 94, 0.16);
+  --status-emergency-bg: rgba(244, 63, 94, 0.14);
   --status-warning: #F59E0B;
-  --status-warning-bg: rgba(245, 158, 11, 0.16);
+  --status-warning-bg: rgba(245, 158, 11, 0.14);
   --status-success: #10B981;
-  --status-success-bg: rgba(16, 185, 129, 0.16);
+  --status-success-bg: rgba(16, 185, 129, 0.14);
 
-  --shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.45);
-  --shadow-elevated: 0 16px 40px -4px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-elevated: 0 8px 30px -4px rgba(0, 0, 0, 0.7);
 }
 
 @layer base {

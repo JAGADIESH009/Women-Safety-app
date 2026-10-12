@@ -38,14 +38,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Authenticated users get all 4 primary areas. Guests get public areas only.
   const navLinks: { label: string; view: PageView; icon: React.ReactNode }[] = user
     ? [
-        { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={14} /> },
-        { label: 'Emergency Contacts', view: 'contacts', icon: <Users size={14} /> },
-        { label: 'Safety Resources', view: 'resources', icon: <BookOpen size={14} /> },
-        { label: 'Profile', view: 'profile', icon: <UserIcon size={14} /> },
+        { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={13} /> },
+        { label: 'Emergency Contacts', view: 'contacts', icon: <Users size={13} /> },
+        { label: 'Safety Resources', view: 'resources', icon: <BookOpen size={13} /> },
+        { label: 'Profile', view: 'profile', icon: <UserIcon size={13} /> },
       ]
     : [
-        { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={14} /> },
-        { label: 'Safety Resources', view: 'resources', icon: <BookOpen size={14} /> },
+        { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={13} /> },
+        { label: 'Safety Resources', view: 'resources', icon: <BookOpen size={13} /> },
       ];
 
   const handleLinkClick = (view: PageView) => {
@@ -64,8 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-base)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors">
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-4">
           
           {/* Logo & Brand */}
           <button 
@@ -82,26 +82,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   (e.target as HTMLElement).style.display = 'none';
                 }} 
               />
-              <ShieldCheck className="w-5 h-5 text-[var(--brand-primary)]" style={{ display: 'none' }} />
+              <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)]" style={{ display: 'none' }} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight text-[var(--text-primary)]">SafeHer</span>
-              <span className="hidden sm:inline-block text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
+              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">SafeHer</span>
+              <span className="hidden sm:inline-block text-[10px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
                 Companion
               </span>
             </div>
           </button>
 
-          {/* Desktop Navigation Links (Centered) */}
-          <nav className="hidden md:flex items-center gap-1.5" aria-label="Main Navigation">
+          {/* Desktop Navigation Links (Segmented Style) */}
+          <nav className="hidden md:flex items-center gap-1 bg-[var(--bg-elevated)]/60 p-1 rounded-xl border border-[var(--border-subtle)]" aria-label="Main Navigation">
             {navLinks.map((link) => (
               <button 
                 key={link.label} 
                 onClick={() => handleLinkClick(link.view)} 
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                   currentView === link.view 
-                    ? 'bg-[var(--brand-primary)] text-white shadow-xs' 
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] font-semibold shadow-xs border border-[var(--border-subtle)]' 
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]/50 font-medium'
                 }`}
               >
                 {link.icon}
@@ -118,19 +118,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={toggleTheme}
               className="p-2 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] transition-all cursor-pointer"
               aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-              title={isDark ? "Switch to Warm Ivory" : "Switch to Dark Wine"}
+              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
             >
-              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
 
-            {/* Small Unobtrusive APK Download Button */}
+            {/* Small APK Download Link */}
             <a
               href={APP_CONFIG.apkDownloadUrl}
               download={APP_CONFIG.apkFilename}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-medium)] text-[var(--text-primary)] text-xs font-semibold transition-all shrink-0"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-medium)] text-[var(--text-primary)] text-xs font-medium transition-all shrink-0 cursor-pointer"
               title="Download SafeHer Android APK"
             >
-              <Smartphone size={13} className="text-[var(--brand-primary)]" />
+              <Smartphone size={12} className="text-[var(--brand-primary)]" />
               <span>Android APK</span>
             </a>
 
@@ -149,15 +149,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
-                  <span className="text-xs font-semibold text-[var(--text-primary)] hidden md:inline max-w-[100px] truncate">
+                  <span className="text-xs font-medium text-[var(--text-primary)] hidden md:inline max-w-[90px] truncate">
                     {user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Account'}
                   </span>
-                  <ChevronDown size={13} className="text-[var(--text-muted)]" />
+                  <ChevronDown size={12} className="text-[var(--text-muted)]" />
                 </button>
 
                 {/* Dropdown Menu */}
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-52 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-medium)] rounded-2xl shadow-[var(--shadow-elevated)] z-50 text-xs">
+                  <div className="absolute right-0 mt-2 w-52 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-medium)] rounded-xl shadow-[var(--shadow-elevated)] z-50 text-xs animate-in fade-in slide-in-from-top-1 duration-150">
                     <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
                       <p className="font-semibold text-[var(--text-primary)] truncate">
                         {user.displayName || 'SafeHer User'}
@@ -171,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => handleLinkClick('profile')}
                       className="w-full px-3 py-2 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
                     >
-                      <UserIcon size={14} />
+                      <UserIcon size={13} />
                       <span>Profile & Medical</span>
                     </button>
 
@@ -179,7 +179,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => handleLinkClick('contacts')}
                       className="w-full px-3 py-2 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
                     >
-                      <Users size={14} />
+                      <Users size={13} />
                       <span>Emergency Contacts</span>
                     </button>
 
@@ -189,7 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={handleSignOut}
                       className="w-full px-3 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors cursor-pointer"
                     >
-                      <LogOut size={14} />
+                      <LogOut size={13} />
                       <span>Sign Out</span>
                     </button>
                   </div>
@@ -197,12 +197,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : isGuest ? (
               <div className="flex items-center gap-2">
-                <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
                   <span>Guest</span>
                 </span>
                 <button
                   onClick={onOpenAccountModal}
-                  className="px-3.5 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
                 >
                   <LogIn size={13} />
                   <span>Sign In</span>
@@ -211,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={onOpenAccountModal}
-                className="px-3.5 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
                 <LogIn size={13} />
                 <span>Sign In</span>
@@ -224,7 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="md:hidden p-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] cursor-pointer"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
             </button>
 
           </div>
@@ -237,10 +237,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={link.label}
                 onClick={() => handleLinkClick(link.view)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
                   currentView === link.view
-                    ? 'bg-[var(--brand-primary)] text-white'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold border border-[var(--border-medium)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] font-medium'
                 }`}
               >
                 {link.icon}
@@ -251,7 +251,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <a
               href={APP_CONFIG.apkDownloadUrl}
               download={APP_CONFIG.apkFilename}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
             >
               <Smartphone size={14} className="text-[var(--brand-primary)]" />
               <span>Download Android APK</span>
@@ -260,7 +260,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {user && (
               <button
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
               >
                 <LogOut size={14} />
                 <span>Sign Out ({user.email})</span>

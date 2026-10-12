@@ -146,27 +146,27 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
   // -------------------------------------------------------------
   if (!user) {
     return (
-      <div className="py-12 px-4 sm:px-6 max-w-xl mx-auto animate-fade-in text-center space-y-6">
-        <div className="p-8 sm:p-10 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm space-y-5">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-center justify-center mx-auto">
-            <Lock size={26} />
+      <div className="py-12 px-4 sm:px-6 max-w-md mx-auto text-center space-y-6">
+        <div className="p-7 sm:p-8 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-medium)] shadow-[var(--shadow-card)] space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex items-center justify-center mx-auto">
+            <Lock size={22} />
           </div>
           
-          <div className="space-y-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text-primary)]">
+          <div className="space-y-1.5">
+            <h1 className="text-lg sm:text-xl font-bold text-[var(--text-primary)]">
               Emergency Contacts Protected
             </h1>
-            <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
-              To safeguard your personal security network and synchronize emergency contact records directly with the SafeHer mobile app, contact management requires an authenticated session.
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              To safeguard your personal security circle and synchronize records with the SafeHer mobile app, contact management requires an authenticated session.
             </p>
           </div>
 
           <div className="pt-2">
             <button
               onClick={onOpenAccountModal}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs sm:text-sm font-semibold transition-all shadow-sm active:scale-95 inline-flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full px-4 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-all shadow-xs active:scale-[0.98] inline-flex items-center justify-center gap-2 cursor-pointer"
             >
-              <LogIn size={15} />
+              <LogIn size={14} />
               <span>Sign In to Access Contacts</span>
             </button>
           </div>
@@ -179,25 +179,25 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
   // AUTHENTICATED EMERGENCY CONTACTS VIEW
   // -------------------------------------------------------------
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6">
       
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               Safety Network
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
               <ShieldCheck size={11} />
               <span>Mobile & Cloud Synced</span>
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
             Emergency Contacts
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mt-0.5">
-            Recipients notified when an emergency SOS is triggered from the SafeHer mobile app.
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+            Recipients notified automatically when an emergency SOS is triggered from the SafeHer mobile app.
           </p>
         </div>
 
@@ -205,7 +205,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
           <button
             onClick={loadContacts}
             disabled={loading}
-            className="p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-text-primary)] transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] text-[var(--text-primary)] transition-all cursor-pointer"
             title="Refresh contacts"
             aria-label="Refresh contacts"
           >
@@ -213,7 +213,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
           </button>
           <button
             onClick={handleOpenAdd}
-            className="px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <UserPlus size={14} />
             <span>Add Contact</span>
@@ -230,14 +230,14 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
       )}
 
       {fetchError && (
-        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle size={15} className="shrink-0" />
             <span>{fetchError}</span>
           </div>
           <button
             onClick={loadContacts}
-            className="font-semibold underline ml-2 cursor-pointer"
+            className="font-medium underline ml-2 cursor-pointer"
           >
             Retry
           </button>
@@ -246,26 +246,26 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
 
       {/* Contact Cards List */}
       {loading ? (
-        <div className="py-16 text-center space-y-3">
-          <div className="w-7 h-7 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-[var(--color-text-muted)]">Loading verified emergency contacts...</p>
+        <div className="py-16 text-center space-y-2">
+          <div className="w-6 h-6 border-2 border-[var(--brand-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[var(--text-muted)]">Loading verified emergency contacts...</p>
         </div>
       ) : contacts.length === 0 ? (
-        <div className="py-16 px-4 text-center rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-8 space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] text-[var(--color-primary)] flex items-center justify-center mx-auto">
-            <Users size={24} />
+        <div className="py-14 px-4 text-center rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-6 space-y-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--brand-primary)] flex items-center justify-center mx-auto">
+            <Users size={22} />
           </div>
           <div className="space-y-1 max-w-md mx-auto">
-            <h3 className="text-base font-bold text-[var(--color-text-primary)]">
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">
               No Emergency Contacts Configured
             </h3>
-            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-              Add trusted family members or friends. Any contacts added here will automatically appear on your mobile app and receive emergency dispatch details during an SOS.
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              Add trusted family members or friends. Any contacts configured here will automatically appear on your mobile app and receive emergency dispatch details during an SOS.
             </p>
           </div>
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-semibold shadow-xs hover:bg-[var(--color-primary-hover)] transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--brand-primary)] text-white text-xs font-medium shadow-xs hover:bg-[var(--brand-hover)] transition-all cursor-pointer"
           >
             <UserPlus size={14} />
             <span>Add First Emergency Contact</span>
@@ -276,54 +276,58 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
           {contacts.map((contact) => (
             <div
               key={contact.id}
-              className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-all shadow-xs flex flex-col justify-between space-y-4 group"
+              className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)]/40 transition-all shadow-[var(--shadow-card)] flex flex-col justify-between space-y-3.5 group"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="font-bold text-sm text-[var(--color-text-primary)]">
+                      <h4 className="font-semibold text-sm text-[var(--text-primary)]">
                         {contact.name}
                       </h4>
                       {contact.is_primary && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                          <Star size={10} fill="currentColor" />
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
+                          <Star size={9} fill="currentColor" />
                           <span>Primary</span>
                         </span>
                       )}
                     </div>
-                    <span className="inline-block text-[11px] font-medium text-[var(--color-text-muted)]">
+                    <span className="inline-block text-[11px] text-[var(--text-muted)]">
                       {contact.relation || 'Emergency Contact'}
                     </span>
                   </div>
 
-                  <div className="w-8 h-8 rounded-xl bg-[var(--color-surface-elevated)] text-[var(--color-primary)] flex items-center justify-center shrink-0">
-                    <Phone size={14} />
-                  </div>
+                  <a
+                    href={`tel:${contact.phone}`}
+                    className="w-8 h-8 rounded-xl bg-[var(--bg-elevated)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white flex items-center justify-center shrink-0 transition-colors"
+                    title={`Call ${contact.name}`}
+                  >
+                    <Phone size={13} />
+                  </a>
                 </div>
 
-                <div className="mt-3 p-2.5 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)]">
-                  <p className="text-xs font-mono font-medium text-[var(--color-text-primary)]">
+                <div className="mt-3 p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
+                  <p className="text-xs font-mono font-medium text-[var(--text-primary)] tabular-nums">
                     {contact.phone}
                   </p>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-end gap-2">
+              <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
                 <button
                   onClick={() => handleOpenEdit(contact)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-elevated)] flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-1 transition-colors cursor-pointer"
                   title="Edit contact"
                 >
-                  <Edit3 size={13} />
+                  <Edit3 size={12} />
                   <span>Edit</span>
                 </button>
                 <button
                   onClick={() => handleDelete(contact.id)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-1 transition-colors cursor-pointer"
                   title="Delete contact"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={12} />
                   <span>Delete</span>
                 </button>
               </div>
@@ -332,20 +336,20 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
         </div>
       )}
 
-      {/* Add / Edit Contact Modal */}
+      {/* Add / Edit Contact Modal: Stripe-tier Minimalist Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl overflow-hidden p-6 space-y-5 animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-medium)] shadow-[var(--shadow-elevated)] overflow-hidden p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-              <h3 className="text-base font-bold text-[var(--color-text-primary)]">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">
                 {editingContact ? 'Edit Emergency Contact' : 'Add Emergency Contact'}
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
@@ -356,9 +360,9 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Full Name *
                 </label>
                 <input
@@ -367,12 +371,12 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Priya Sharma"
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--color-bg-base)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Phone Number (with country code) *
                 </label>
                 <input
@@ -381,18 +385,18 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. +91 98765 43210"
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--color-bg-base)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] transition-colors font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Relationship
                 </label>
                 <select
                   value={relation}
                   onChange={(e) => setRelation(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--color-bg-base)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] transition-colors cursor-pointer"
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary)] transition-all cursor-pointer"
                 >
                   <option value="Parent">Parent</option>
                   <option value="Spouse">Spouse / Partner</option>
@@ -411,29 +415,29 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
                   id="primaryContactCheck"
                   checked={isPrimary}
                   onChange={(e) => setIsPrimary(e.target.checked)}
-                  className="w-4 h-4 rounded text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-[var(--color-border)] cursor-pointer"
+                  className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-[var(--brand-primary)] border-[var(--border-medium)] cursor-pointer"
                 />
-                <label htmlFor="primaryContactCheck" className="text-xs text-[var(--color-text-primary)] font-medium cursor-pointer">
-                  Set as Primary Contact (receives priority alert first)
+                <label htmlFor="primaryContactCheck" className="text-xs text-[var(--text-primary)] font-medium cursor-pointer">
+                  Set as Primary Contact (receives priority SOS notification)
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--color-border)]">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-subtle)]">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[var(--color-surface-elevated)] text-[var(--color-text-secondary)] text-xs font-semibold hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)] text-xs font-medium hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       <span>Saving...</span>
                     </>
                   ) : (

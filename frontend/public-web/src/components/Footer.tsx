@@ -17,31 +17,29 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   };
 
   return (
-    <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-base)] py-8 px-4 sm:px-6 lg:px-8 text-xs text-[var(--text-secondary)]">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-base)] py-8 px-4 sm:px-6 text-xs text-[var(--text-secondary)]">
+      <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
         
         {/* Brand & Mission */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="SafeHer" className="w-6 h-6 rounded-lg object-cover shrink-0" />
-            <span className="font-extrabold text-sm text-[var(--text-primary)] tracking-tight">SafeHer</span>
-          </div>
-          <span className="hidden sm:inline text-[var(--text-muted)]">•</span>
-          <p className="text-[11px] text-[var(--text-secondary)]">
-            Personal Safety Web Companion • Emergency Helpline: <strong className="text-[var(--text-primary)]">112 / 1091</strong>
-          </p>
+        <div className="flex items-center gap-2.5">
+          <img src="/logo.png" alt="SafeHer" className="w-5 h-5 rounded-md object-cover shrink-0" />
+          <span className="font-bold text-xs text-[var(--text-primary)] tracking-tight">SafeHer</span>
+          <span className="text-[var(--text-muted)]">•</span>
+          <span className="text-[11px] text-[var(--text-secondary)]">
+            Emergency Helpline: <strong className="text-[var(--text-primary)] font-mono">112 / 1091</strong>
+          </span>
         </div>
 
         {/* Navigation Links */}
-        <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+        <div className="flex flex-wrap items-center justify-center gap-3.5 text-[11px]">
           <button onClick={() => handleNav('dashboard')} className="hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
             Dashboard
           </button>
           <button onClick={() => handleNav('contacts')} className="hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
-            Emergency Contacts
+            Contacts
           </button>
           <button onClick={() => handleNav('resources')} className="hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
-            Safety Resources
+            Resources
           </button>
           <button onClick={() => handleNav('profile')} className="hover:text-[var(--brand-primary)] transition-colors cursor-pointer">
             Profile
@@ -58,17 +56,17 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             href={APP_CONFIG.apkDownloadUrl}
             download={APP_CONFIG.apkFilename}
             className="inline-flex items-center gap-1 hover:text-[var(--brand-primary)] transition-colors font-medium text-[var(--text-primary)]"
-            title="Download Android APK (84.6 MB)"
+            title="Download Android APK"
           >
-            <Smartphone size={12} className="text-[var(--brand-primary)]" />
+            <Smartphone size={11} className="text-[var(--brand-primary)]" />
             <span>Android APK</span>
           </a>
         </div>
 
         {/* Verification badge */}
         <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-          <ShieldCheck size={14} className="text-emerald-500" />
-          <span>© 2026 SafeHer Companion</span>
+          <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span>© 2026 SafeHer</span>
         </div>
 
       </div>
