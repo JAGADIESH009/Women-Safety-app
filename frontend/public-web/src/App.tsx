@@ -8,6 +8,7 @@ import { AccountModal } from './components/AccountModal';
 // Primary Application Views
 import { WelcomeAuthView } from './components/WelcomeAuthView';
 import { WebDashboard } from './components/WebDashboard';
+import { FullMapPage } from './components/FullMapPage';
 import { ContactsManager } from './components/ContactsManager';
 import { UserProfileView } from './components/UserProfileView';
 import { SafetyResourcesView } from './components/SafetyResourcesView';
@@ -30,6 +31,7 @@ export const AppContent: React.FC = () => {
       const validAppViews: PageView[] = [
         'welcome',
         'dashboard',
+        'map',
         'contacts',
         'resources',
         'profile',
@@ -101,6 +103,9 @@ export const AppContent: React.FC = () => {
             onOpenAccountModal={() => setAccountModalOpen(true)} 
           />
         );
+
+      case 'map':
+        return <FullMapPage onNavigate={navigateTo} />;
 
       case 'contacts':
         return (

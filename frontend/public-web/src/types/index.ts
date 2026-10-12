@@ -1,6 +1,7 @@
 export type PageView = 
   | 'welcome'
-  | 'dashboard' 
+  | 'dashboard'
+  | 'map'
   | 'features' 
   | 'contacts' 
   | 'resources' 

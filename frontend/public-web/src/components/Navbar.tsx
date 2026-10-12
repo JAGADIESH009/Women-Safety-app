@@ -9,10 +9,10 @@ import {
   LogOut, 
   ChevronDown, 
   LayoutDashboard, 
-  Users, 
-  BookOpen, 
+  MapPin, 
   LogIn,
-  Smartphone
+  Smartphone,
+  Users
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -35,18 +35,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  // Authenticated users get all 4 primary areas. Guests get public areas only.
-  const navLinks: { label: string; view: PageView; icon: React.ReactNode }[] = user
-    ? [
-        { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={13} /> },
-        { label: 'Emergency Contacts', view: 'contacts', icon: <Users size={13} /> },
-        { label: 'Safety Resources', view: 'resources', icon: <BookOpen size={13} /> },
-        { label: 'Profile', view: 'profile', icon: <UserIcon size={13} /> },
-      ]
-    : [
-        { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={13} /> },
-        { label: 'Safety Resources', view: 'resources', icon: <BookOpen size={13} /> },
-      ];
+  // Essential Primary Destinations: Dashboard & Map
+  const primaryLinks: { label: string; view: PageView; icon: React.ReactNode }[] = [
+    { label: 'Dashboard', view: 'dashboard', icon: <LayoutDashboard size={14} /> },
+    { label: 'Map', view: 'map', icon: <MapPin size={14} /> },
+  ];
 
   const handleLinkClick = (view: PageView) => {
     onNavigate(view);
@@ -64,82 +57,93 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-base)]/85 backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors">
-      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-4">
           
-          {/* Logo & Brand */}
-          <button 
-            onClick={() => handleLinkClick('dashboard')}
-            className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer shrink-0" 
-            aria-label="SafeHer Dashboard"
-          >
-            <div className="w-8 h-8 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-medium)] p-1 flex items-center justify-center shadow-xs group-hover:border-[var(--brand-primary)] transition-colors shrink-0">
-              <img 
-                src="/logo.png" 
-                alt="SafeHer Logo" 
-                className="w-full h-full rounded-lg object-cover" 
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }} 
-              />
-              <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)]" style={{ display: 'none' }} />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">SafeHer</span>
-              <span className="hidden sm:inline-block text-[10px] font-mono tracking-wider uppercase px-1.5 py-0.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
-                Companion
-              </span>
-            </div>
-          </button>
-
-          {/* Desktop Navigation Links (Segmented Style) */}
-          <nav className="hidden md:flex items-center gap-1 bg-[var(--bg-elevated)]/60 p-1 rounded-xl border border-[var(--border-subtle)]" aria-label="Main Navigation">
-            {navLinks.map((link) => (
-              <button 
-                key={link.label} 
-                onClick={() => handleLinkClick(link.view)} 
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  currentView === link.view 
-                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] font-semibold shadow-xs border border-[var(--border-subtle)]' 
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]/50 font-medium'
-                }`}
-              >
-                {link.icon}
-                <span>{link.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Right Action Bar */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] transition-all cursor-pointer"
-              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+          {/* Left: SafeHer Logo & Brand + Desktop Navigation */}
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => handleLinkClick('dashboard')}
+              className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer shrink-0" 
+              aria-label="SafeHer Home"
             >
-              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+              <div className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-medium)] p-1 flex items-center justify-center shadow-xs group-hover:border-[var(--brand-primary)] transition-colors shrink-0">
+                <img 
+                  src="/logo.png" 
+                  alt="SafeHer Logo" 
+                  className="w-full h-full rounded object-cover" 
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }} 
+                />
+                <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)]" style={{ display: 'none' }} />
+              </div>
+              <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">SafeHer</span>
             </button>
 
-            {/* Small APK Download Link */}
+            {/* Desktop Navigation Links: Dashboard & Map */}
+            <nav className="hidden sm:flex items-center gap-1" aria-label="Main Navigation">
+              {primaryLinks.map((link) => (
+                <button 
+                  key={link.view} 
+                  onClick={() => handleLinkClick(link.view)} 
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                    currentView === link.view 
+                      ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold border border-[var(--border-subtle)]' 
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]/60 font-medium'
+                  }`}
+                >
+                  {link.icon}
+                  <span>{link.label}</span>
+                </button>
+              ))}
+
+              {user && (
+                <button 
+                  onClick={() => handleLinkClick('contacts')} 
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                    currentView === 'contacts' 
+                      ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold border border-[var(--border-subtle)]' 
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]/60 font-medium'
+                  }`}
+                >
+                  <Users size={14} />
+                  <span>Contacts</span>
+                </button>
+              )}
+            </nav>
+          </div>
+
+          {/* Right Action Bar: Theme, APK Download, Auth */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            
+            {/* Android APK Download Action */}
             <a
               href={APP_CONFIG.apkDownloadUrl}
               download={APP_CONFIG.apkFilename}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-medium)] text-[var(--text-primary)] text-xs font-medium transition-all shrink-0 cursor-pointer"
-              title="Download SafeHer Android APK"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] text-[var(--text-primary)] text-xs font-medium transition-colors shrink-0 cursor-pointer"
+              title="Download SafeHer Android APK (84.6 MB)"
             >
-              <Smartphone size={12} className="text-[var(--brand-primary)]" />
+              <Smartphone size={13} className="text-[var(--brand-primary)]" />
               <span>Android APK</span>
             </a>
+
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-md bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] transition-colors cursor-pointer"
+              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {isDark ? <Sun size={13} /> : <Moon size={13} />}
+            </button>
 
             {/* Account / Authentication State */}
             {user ? (
               <div className="relative">
                 <button 
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] transition-all cursor-pointer"
+                  className="flex items-center gap-2 py-1 px-2.5 rounded-md bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)] transition-colors cursor-pointer"
                   aria-label="User Account Menu"
                 >
                   {user.photoURL ? (
@@ -157,12 +161,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* Dropdown Menu */}
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-52 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-medium)] rounded-xl shadow-[var(--shadow-elevated)] z-50 text-xs animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="absolute right-0 mt-2 w-48 py-1 bg-[var(--bg-surface)] border border-[var(--border-medium)] rounded-lg shadow-lg z-50 text-xs animate-fade-in">
                     <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
                       <p className="font-semibold text-[var(--text-primary)] truncate">
                         {user.displayName || 'SafeHer User'}
                       </p>
-                      <p className="text-[11px] text-[var(--text-muted)] truncate font-mono">
+                      <p className="text-[10px] text-[var(--text-muted)] truncate font-mono">
                         {user.email}
                       </p>
                     </div>
@@ -172,7 +176,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full px-3 py-2 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <UserIcon size={13} />
-                      <span>Profile & Medical</span>
+                      <span>Profile</span>
                     </button>
 
                     <button 
@@ -180,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full px-3 py-2 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Users size={13} />
-                      <span>Emergency Contacts</span>
+                      <span>Contacts</span>
                     </button>
 
                     <div className="border-t border-[var(--border-subtle)] my-1"></div>
@@ -197,23 +201,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : isGuest ? (
               <div className="flex items-center gap-2">
-                <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  <span>Guest</span>
+                <span className="hidden sm:inline-block text-[10px] text-[var(--text-muted)]">
+                  Guest
                 </span>
                 <button
                   onClick={onOpenAccountModal}
-                  className="px-3 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  className="px-2.5 py-1.5 rounded-md bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <LogIn size={13} />
+                  <LogIn size={12} />
                   <span>Sign In</span>
                 </button>
               </div>
             ) : (
               <button
                 onClick={onOpenAccountModal}
-                className="px-3 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="px-2.5 py-1.5 rounded-md bg-[var(--brand-primary)] hover:bg-[var(--brand-hover)] text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
               >
-                <LogIn size={13} />
+                <LogIn size={12} />
                 <span>Sign In</span>
               </button>
             )}
@@ -221,10 +225,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] cursor-pointer"
+              className="sm:hidden p-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] cursor-pointer"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
+              {mobileMenuOpen ? <X size={15} /> : <Menu size={15} />}
             </button>
 
           </div>
@@ -232,15 +236,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[var(--border-subtle)] py-3 px-1 space-y-1 bg-[var(--bg-base)]">
-            {navLinks.map((link) => (
+          <div className="sm:hidden border-t border-[var(--border-subtle)] py-2.5 space-y-1 bg-[var(--bg-base)] animate-fade-in">
+            {primaryLinks.map((link) => (
               <button
-                key={link.label}
+                key={link.view}
                 onClick={() => handleLinkClick(link.view)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all cursor-pointer ${
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-colors cursor-pointer ${
                   currentView === link.view
-                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold border border-[var(--border-medium)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] font-medium'
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]/60 font-medium'
                 }`}
               >
                 {link.icon}
@@ -248,10 +252,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             ))}
 
+            {user && (
+              <button
+                onClick={() => handleLinkClick('contacts')}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-colors cursor-pointer ${
+                  currentView === 'contacts'
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-semibold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]/60 font-medium'
+                }`}
+              >
+                <Users size={14} />
+                <span>Emergency Contacts</span>
+              </button>
+            )}
+
             <a
               href={APP_CONFIG.apkDownloadUrl}
               download={APP_CONFIG.apkFilename}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]/60 transition-colors"
             >
               <Smartphone size={14} className="text-[var(--brand-primary)]" />
               <span>Download Android APK</span>
@@ -260,7 +278,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {user && (
               <button
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
                 <LogOut size={14} />
                 <span>Sign Out ({user.email})</span>
