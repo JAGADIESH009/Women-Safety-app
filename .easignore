@@ -1,0 +1,71 @@
+# Root .easignore for monorepo EAS builds
+
+# Non-mobile workspaces
+backend/
+frontend/admin/
+frontend/public-web/
+database/
+deployment/
+docker/
+docs/
+tests/
+.git/
+.agents/
+.pytest_cache/
+.vercel/
+
+# Environments
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+env/
+
+# Android build caches and intermediate build files
+frontend/mobile/android/.gradle/
+frontend/mobile/android/app/build/
+frontend/mobile/android/build/
+frontend/mobile/android/.idea/
+android/.gradle/
+android/app/build/
+android/build/
+.gradle/
+build/
+
+# Expo / React Native
+.expo/
+dist/
+web-build/
+*.jks
+*.keystore
+*.apk
+frontend/mobile/latest.apk
+
+# Temp & testing files
+.playwright-cli/
+*.db
+*.sqlite3
+*.b64
+adb_full_dump.txt
+dumpsys.txt
+sos_logcat.txt
+*.html
+*.xml
+*.mjs
+*.png
+*.log
+
+# Explicitly keep mobile assets
+!frontend/mobile/assets/
+!frontend/mobile/assets/*
+!frontend/mobile/assets/**/*.png
+!frontend/mobile/google-services.json
