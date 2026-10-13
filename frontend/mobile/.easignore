@@ -30,8 +30,12 @@ android/.idea/
 .gradle/
 build/
 .playwright-cli/
-*.png
 
+# Loose test screenshots in mobile root only
+/*_screen*.png
+/running_app*.png
+/page_dump.png
+/screen_current.png
 
 # IDEs and OS
 .vscode/
@@ -57,9 +61,7 @@ fix_contacts.py
 dummy_sa.json
 firebase-credentials.json
 
-# Explicitly keep Expo assets so EAS CLI packs them
-!assets/
-!assets/*
-!assets/**/*.png
-!frontend/mobile/assets/*.png
-
+# Explicitly keep Expo assets and Android native resources
+!assets/**
+!android/app/src/main/res/**
+!google-services.json

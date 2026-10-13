@@ -60,11 +60,13 @@ dumpsys.txt
 sos_logcat.txt
 *.html
 *.mjs
-*.png
 *.log
+/*_screen*.png
+/running_app*.png
+frontend/mobile/*_screen*.png
+frontend/mobile/running_app*.png
 
-# Explicitly keep mobile assets
-!frontend/mobile/assets/
-!frontend/mobile/assets/*
-!frontend/mobile/assets/**/*.png
+# Explicitly keep mobile assets and Android native resources
+!frontend/mobile/assets/**
+!frontend/mobile/android/app/src/main/res/**
 !frontend/mobile/google-services.json
