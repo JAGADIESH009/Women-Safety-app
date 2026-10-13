@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // 1. Local over adb reverse (127.0.0.1:8000)
 // 2. Production cloud backend (https://women-safety-app-xo2h.onrender.com)
 const CLOUD_API_URL = 'https://women-safety-app-xo2h.onrender.com';
-const LOCAL_API_URL = Platform.OS === 'android' ? 'http://127.0.0.1:8000' : 'http://localhost:8000';
+const LOCAL_API_URL = Platform.OS === 'android' ? 'http://192.168.0.131:8000' : 'http://localhost:8000';
 
 const getInitialBaseUrl = () => {
     if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
