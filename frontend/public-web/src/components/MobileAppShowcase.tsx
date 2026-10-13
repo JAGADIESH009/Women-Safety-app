@@ -1,12 +1,5 @@
 import React from 'react';
-import { 
-  ShieldCheck, 
-  MapPin, 
-  Users, 
-  ArrowRight,
-  Wifi,
-  BatteryMedium
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { APP_CONFIG } from '../config/appConfig';
 
 interface MobileAppShowcaseProps {
@@ -87,8 +80,8 @@ export const MobileAppShowcase: React.FC<MobileAppShowcaseProps> = ({ onExploreC
         </div>
 
         {/* Right Column: Premium 3D Phone Showcase */}
-        <div className="lg:col-span-6 flex items-center justify-center">
-          <div className="phone-3d-wrapper relative w-full max-w-[310px] sm:max-w-[330px]">
+        <div className="lg:col-span-6 flex items-center justify-center py-2">
+          <div className="phone-3d-wrapper relative w-full max-w-[260px] sm:max-w-[280px]">
             
             {/* Ambient Backlight Glow (Subtle and restrained) */}
             <div 
@@ -97,7 +90,7 @@ export const MobileAppShowcase: React.FC<MobileAppShowcaseProps> = ({ onExploreC
             />
 
             {/* 3D Phone Chassis with Realistic Bezel & Hardware Details */}
-            <div className="phone-3d-chassis relative w-full aspect-[9/18.8] rounded-[44px] bg-[#0E0C0D] p-[10px] shadow-[0_28px_60px_-15px_rgba(0,0,0,0.35),0_12px_28px_-10px_rgba(134,22,53,0.18)] border border-white/20 select-none">
+            <div className="phone-3d-chassis relative w-full aspect-[458/1024] rounded-[44px] bg-[#0E0C0D] p-[10px] shadow-[0_28px_60px_-15px_rgba(0,0,0,0.35),0_12px_28px_-10px_rgba(134,22,53,0.18)] border border-white/20 select-none">
               
               {/* Outer Metallic Bevel Ring */}
               <div className="absolute inset-0 rounded-[44px] border border-white/10 pointer-events-none" />
@@ -109,108 +102,22 @@ export const MobileAppShowcase: React.FC<MobileAppShowcaseProps> = ({ onExploreC
               {/* Hardware Power Key (Right) */}
               <div className="absolute -right-[3px] top-[116px] w-[3px] h-[44px] rounded-r bg-neutral-600/80" />
 
-              {/* Phone Inner Screen UI */}
-              <div className="relative w-full h-full rounded-[36px] bg-[#120F11] overflow-hidden flex flex-col justify-between text-white border border-white/5">
-                
-                {/* Diagonal Glass Reflection Highlight */}
-                <div 
-                  className="absolute inset-0 pointer-events-none z-30 opacity-40 bg-gradient-to-tr from-transparent via-white/10 to-transparent" 
-                  aria-hidden="true"
+              {/* Phone Inner Screen UI with Real SafeHer Dashboard Screenshot */}
+              <div className="relative w-full h-full rounded-[34px] bg-[#FAF7F6] overflow-hidden border border-white/10 shadow-inner">
+                {/* Authentic Mobile App Screenshot */}
+                <img 
+                  src="/safeher-app-screen.png" 
+                  alt="SafeHer Mobile App Live Dashboard showing safety readiness, emergency SOS trigger, and real-time location sharing" 
+                  className="w-full h-full object-cover object-top select-none pointer-events-none"
+                  loading="eager"
+                  decoding="async"
                 />
 
-                {/* Top Status Bar & Camera Island */}
-                <div className="pt-2 px-5 pb-1 flex items-center justify-between text-[11px] font-medium text-neutral-400 shrink-0 z-20">
-                  <span className="font-mono text-[10px]">09:41</span>
-                  {/* Dynamic Island / Earpiece */}
-                  <div className="w-16 h-3.5 bg-black rounded-full flex items-center justify-end px-1.5 border border-white/5 shadow-inner">
-                    <div className="w-1.5 h-1.5 rounded-full bg-neutral-900 border border-neutral-700" />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Wifi size={11} className="text-neutral-400" />
-                    <span className="text-[9px] font-mono">5G</span>
-                    <BatteryMedium size={12} className="text-neutral-400" />
-                  </div>
-                </div>
-
-                {/* App Screen Content: Replicating HomeScreen.js */}
-                <div className="flex-1 px-4 py-2 flex flex-col justify-between space-y-2.5 z-10 overflow-hidden">
-                  
-                  {/* App Header (HomeScreen.js Greeting & Avatar) */}
-                  <div className="flex items-center justify-between pt-1">
-                    <div>
-                      <p className="text-[10px] text-neutral-400 uppercase tracking-wider">SafeHer Companion</p>
-                      <h4 className="text-xs font-semibold text-white tracking-tight">Good evening, Guardian</h4>
-                    </div>
-                    <div className="w-6 h-6 rounded-full bg-rose-950/60 border border-rose-500/30 flex items-center justify-center text-[10px] font-bold text-rose-300">
-                      G
-                    </div>
-                  </div>
-
-                  {/* Protection Status Banner (HomeScreen.js renderSafetyStatus) */}
-                  <div className="p-2.5 rounded-xl bg-neutral-900/90 border border-neutral-800 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldCheck size={14} className="text-emerald-400" />
-                        <span className="text-[11px] font-medium text-emerald-300">You're protected</span>
-                      </div>
-                      <span className="text-[9px] font-mono text-neutral-400">100% Ready</span>
-                    </div>
-                    <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
-                      <div className="w-full h-full bg-emerald-500 rounded-full" />
-                    </div>
-                  </div>
-
-                  {/* Central SOS Emergency Trigger (SOSButton.js) */}
-                  <div className="flex flex-col items-center justify-center py-2 relative">
-                    {/* Concentric Pulse Rings */}
-                    <div className="absolute w-28 h-28 rounded-full border border-rose-500/15 animate-ping opacity-25" />
-                    <div className="absolute w-24 h-24 rounded-full border border-rose-500/25" />
-                    
-                    {/* SOS Core Button */}
-                    <div className="relative w-20 h-20 rounded-full bg-gradient-to-b from-[#861635] to-[#5c0d23] border-2 border-rose-400/40 shadow-[0_8px_20px_rgba(134,22,53,0.45)] flex flex-col items-center justify-center text-center">
-                      <span className="text-base font-black tracking-wider text-white">SOS</span>
-                      <span className="text-[8px] font-medium text-rose-200 tracking-tight uppercase">Hold 3s</span>
-                    </div>
-                    <span className="text-[9px] text-neutral-400 mt-2 font-medium">Emergency Broadcast Ready</span>
-                  </div>
-
-                  {/* Quick Cards Grid: Trusted Contact & Location Guard */}
-                  <div className="grid grid-cols-2 gap-2 text-left">
-                    <div className="p-2 rounded-xl bg-neutral-900/80 border border-neutral-800">
-                      <div className="flex items-center gap-1 text-[10px] text-neutral-400 mb-0.5">
-                        <Users size={10} className="text-rose-400" />
-                        <span>Guardian</span>
-                      </div>
-                      <p className="text-[10px] font-semibold text-neutral-200 truncate">Sudha</p>
-                      <p className="text-[8px] text-emerald-400 font-medium">● 7893748175</p>
-                    </div>
-
-                    <div className="p-2 rounded-xl bg-neutral-900/80 border border-neutral-800">
-                      <div className="flex items-center gap-1 text-[10px] text-neutral-400 mb-0.5">
-                        <MapPin size={10} className="text-rose-400" />
-                        <span>GPS Live</span>
-                      </div>
-                      <p className="text-[10px] font-semibold text-neutral-200">Location</p>
-                      <p className="text-[8px] text-emerald-400 font-medium">● Accurate &lt; 5m</p>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Bottom App Navigation Bar */}
-                <div className="h-10 border-t border-neutral-800/80 bg-neutral-950/80 px-5 flex items-center justify-around text-neutral-500 shrink-0 z-20">
-                  <div className="flex flex-col items-center text-rose-400">
-                    <div className="w-1 h-1 rounded-full bg-rose-400 mb-0.5" />
-                    <span className="text-[8px] font-medium">Home</span>
-                  </div>
-                  <span className="text-[8px]">Contacts</span>
-                  <span className="text-[8px]">Map</span>
-                  <span className="text-[8px]">Profile</span>
-                </div>
-
-                {/* Android Bottom Gesture Bar */}
-                <div className="w-24 h-1 bg-neutral-600/60 rounded-full mx-auto my-1.5 shrink-0" />
-
+                {/* Diagonal Glass Reflection Highlight */}
+                <div 
+                  className="absolute inset-0 pointer-events-none z-30 opacity-25 bg-gradient-to-tr from-transparent via-white/15 to-transparent" 
+                  aria-hidden="true"
+                />
               </div>
 
             </div>
