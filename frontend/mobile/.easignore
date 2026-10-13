@@ -46,7 +46,6 @@ adb_full_dump.txt
 dumpsys.txt
 sos_logcat.txt
 *.html
-*.xml
 *.mjs
 *.pyc
 
