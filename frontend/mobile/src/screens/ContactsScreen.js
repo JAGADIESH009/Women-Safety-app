@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { SecondaryHeader } from '../components/ui/SecondaryHeader';
-import { UserPlus, User, Trash2, Phone, Pencil, RotateCw, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { UserPlus, User, Trash2, Phone, Pencil, RotateCw, CheckCircle2, AlertCircle, Star } from 'lucide-react-native';
 import { useAppTheme, spacing, typography, borderRadius } from '../utils/theme';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -409,6 +409,33 @@ export function ContactsScreen({ navigation }) {
     }
   };
 
+  const handleSetPrimary = async (contactId) => {
+    const updated = contacts.map(c => ({
+      ...c,
+      isPrimary: c.id === contactId,
+      enabled: true,
+    })).sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+
+    setContacts(updated);
+    try {
+      await saveContacts(updated);
+      const targetContact = updated.find(c => c.id === contactId);
+      if (targetContact?.backendId) {
+        try {
+          await api.updateContact(targetContact.backendId, {
+            name: targetContact.name,
+            phone: targetContact.phone,
+            is_primary: true,
+          });
+        } catch (e) {
+          console.log("[ContactsScreen] Failed to update primary status on backend:", e.message);
+        }
+      }
+    } catch (e) {
+      console.error("[ContactsScreen] Failed to set primary contact:", e);
+    }
+  };
+
   const renderContact = ({ item }) => (
     <Card style={styles.contactCard} variant="flat">
       <View style={styles.contactInfo}>
@@ -418,16 +445,28 @@ export function ContactsScreen({ navigation }) {
         <View style={styles.textContainer}>
           <View style={styles.nameRow}>
             <Text style={styles.contactName}>{item.name}</Text>
-            {item.isPrimary && (
+            {item.isPrimary ? (
               <View style={styles.primaryBadge}>
-                <Text style={styles.primaryBadgeText}>Primary</Text>
+                <Text style={styles.primaryBadgeText}>Primary SOS</Text>
               </View>
-            )}
+            ) : null}
           </View>
           <Text style={styles.contactPhone}>{item.phone}</Text>
         </View>
       </View>
       <View style={styles.actionButtons}>
+        <TouchableOpacity 
+          style={[styles.starBtn, item.isPrimary && styles.starBtnActive]} 
+          onPress={() => handleSetPrimary(item.id)}
+          activeOpacity={0.7}
+          accessibilityLabel={item.isPrimary ? "Primary contact for SOS" : "Set as primary contact"}
+        >
+          <Star 
+            size={18} 
+            color={item.isPrimary ? "#EAB308" : colors.textTertiary} 
+            fill={item.isPrimary ? "#EAB308" : "transparent"} 
+          />
+        </TouchableOpacity>
         <TouchableOpacity 
           style={styles.actionBtn} 
           onPress={() => handleEdit(item)}
@@ -689,6 +728,20 @@ const getStyles = (colors, shadows, isDark) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  starBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.bgTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  starBtnActive: {
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    borderColor: '#EAB308',
   },
   actionBtn: {
     width: 36,

@@ -37,18 +37,10 @@ export function EmergencyActiveScreen({ navigation }) {
     }
   }, [activeIncident]);
 
-  // Live location tracking
+  // Live location tracking: automatically streams from singleton location watcher
   useEffect(() => {
-    // Initial fetch on mount
     refreshLocation();
-    
-    // Poll every 10 seconds during emergency
-    const locInterval = setInterval(() => {
-      refreshLocation();
-    }, 10000);
-    
-    return () => clearInterval(locInterval);
-  }, []);
+  }, [refreshLocation]);
 
   // Sync new location to incident
   useEffect(() => {
@@ -62,7 +54,7 @@ export function EmergencyActiveScreen({ navigation }) {
         updateIncidentLocation(location);
       }
     }
-  }, [location]);
+  }, [location, activeIncident, updateIncidentLocation]);
 
   const handleEndEmergency = () => {
     if (Platform.OS === 'web') {
@@ -90,17 +82,22 @@ export function EmergencyActiveScreen({ navigation }) {
 
   if (!activeIncident) return null;
 
-  const loc = activeIncident.latestLocation || activeIncident.initialLocation || activeIncident.location || {};
+  const loc = activeIncident.latestLocation || activeIncident.initialLocation || activeIncident.location || location || {};
   const isHighAccuracy = loc.accuracyLevel === 'HIGH' || loc.accuracy < 20;
 
-  const primaryContact = activeIncident.emergencyContacts?.find(c => c.isPrimary && c.enabled) || activeIncident.emergencyContacts?.[0];
-  const callActionTitle = primaryContact?.name ? `CALL ${primaryContact.name.toUpperCase()}` : "CALL 911";
+  const primaryContact = activeIncident.emergencyContacts?.find(c => (c.isPrimary || c.is_primary) && c.enabled !== false) 
+    || activeIncident.emergencyContacts?.find(c => c.enabled !== false && c.phone) 
+    || activeIncident.emergencyContacts?.[0];
+  
+  const callActionTitle = primaryContact?.name 
+    ? `CALL ${primaryContact.name.toUpperCase()}` 
+    : (primaryContact?.phone ? `CALL ${primaryContact.phone}` : "CALL 112");
 
   const handleManualCall = () => {
     if (primaryContact?.phone) {
-      initiateEmergencyCall(primaryContact);
+      initiateEmergencyCall(primaryContact, primaryContact.phone);
     } else {
-      initiateEmergencyCall({ phone: '911' });
+      initiateEmergencyCall({ phone: '112' }, '112');
     }
   };
 

@@ -1,19 +1,19 @@
 import { auth } from '../config/firebase';
 import { Platform } from 'react-native';
 
-// Use env var if available, else fallback to standard local dev ports
-// For Android Emulator, localhost is 10.0.2.2
-const getBaseUrl = () => {
+// Multi-tier API endpoints for extreme connection resilience:
+// 1. Local over adb reverse (127.0.0.1:8000)
+// 2. Production cloud backend (https://women-safety-app-xo2h.onrender.com)
+const CLOUD_API_URL = 'https://women-safety-app-xo2h.onrender.com';
+const LOCAL_API_URL = Platform.OS === 'android' ? 'http://127.0.0.1:8000' : 'http://localhost:8000';
+
+const getInitialBaseUrl = () => {
     if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-    if (__DEV__) {
-        // Use 127.0.0.1 over adb reverse to bypass Windows Firewall
-        return Platform.OS === 'android' ? 'http://127.0.0.1:8000' : 'http://localhost:8000';
-    }
-    return 'https://women-safety-app-xo2h.onrender.com'; // Fallback for production if env missing
+    return __DEV__ ? LOCAL_API_URL : CLOUD_API_URL;
 };
 
-const API_URL = getBaseUrl();
-console.log('[API Config] Resolved base URL:', API_URL);
+let activeBaseUrl = getInitialBaseUrl();
+console.log('[API Config] Initial base URL:', activeBaseUrl);
 
 // Helper to get fresh token and configure headers
 const getHeaders = async () => {
@@ -29,16 +29,13 @@ const getHeaders = async () => {
     };
 };
 
-// Generic API caller with error handling
-const fetchApi = async (endpoint, options = {}) => {
-    try {
-        const headers = await getHeaders();
-        
-        const timeoutMs = options.timeout || 60000; // Increased to 60s for Render cold starts
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+const executeFetch = async (baseUrl, endpoint, options, headers) => {
+    const timeoutMs = options.timeout || (baseUrl.includes('127.0.0.1') ? 3500 : 7000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-        const response = await fetch(`${API_URL}${endpoint}`, {
+    try {
+        const response = await fetch(`${baseUrl}${endpoint}`, {
             ...options,
             headers: {
                 ...headers,
@@ -46,11 +43,10 @@ const fetchApi = async (endpoint, options = {}) => {
             },
             signal: controller.signal
         });
-        
         clearTimeout(timeoutId);
 
         if (response.status === 204) {
-            return null; // No content
+            return { ok: true, data: null };
         }
 
         const text = await response.text();
@@ -62,7 +58,6 @@ const fetchApi = async (endpoint, options = {}) => {
             const errorMsg = isHtml 
                 ? `Server returned HTML instead of JSON. Check your API_URL configuration.` 
                 : `Invalid JSON response from server.`;
-            
             const errorObj = new Error(errorMsg);
             errorObj.status = response.status;
             throw errorObj;
@@ -74,19 +69,52 @@ const fetchApi = async (endpoint, options = {}) => {
             throw errorObj;
         }
 
-        return data;
-    } catch (error) {
-        const msg = error.message ? error.message.toLowerCase() : '';
-        const isNetwork = msg.includes('network') || msg.includes('connect') || msg.includes('fetch failed');
-        const isAuthOrNotFound = error.status === 404 || error.status === 403 || msg.includes('not found') || msg.includes('authorized');
-        const isParseError = msg.includes('html instead of json') || msg.includes('invalid json') || msg.includes('json parse error');
-        
-        if (isNetwork || isAuthOrNotFound || isParseError) {
-            console.warn(`[API Warning] ${endpoint}:`, error.message);
-        } else {
-            console.error(`[API Error] ${endpoint}:`, error.message);
+        return { ok: true, data };
+    } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+    }
+};
+
+// Generic API caller with resilient automatic cloud / local fallback
+const fetchApi = async (endpoint, options = {}) => {
+    const headers = await getHeaders();
+
+    // 1. First attempt with active base URL
+    try {
+        const res = await executeFetch(activeBaseUrl, endpoint, options, headers);
+        return res.data;
+    } catch (primaryErr) {
+        const primaryErrMsg = primaryErr.message ? primaryErr.message.toLowerCase() : '';
+        const isConnectionErr = primaryErrMsg.includes('connect') || 
+                                primaryErrMsg.includes('network') || 
+                                primaryErrMsg.includes('failed to fetch') ||
+                                primaryErrMsg.includes('aborted');
+
+        // If it was a network/connection failure, attempt fallback immediately
+        const fallbackUrl = activeBaseUrl === LOCAL_API_URL ? CLOUD_API_URL : LOCAL_API_URL;
+        if (isConnectionErr) {
+            console.warn(`[API Fallback] ${activeBaseUrl} failed (${primaryErr.message}). Retrying on ${fallbackUrl}...`);
+            try {
+                const fallbackRes = await executeFetch(fallbackUrl, endpoint, options, headers);
+                // Remember the working endpoint
+                activeBaseUrl = fallbackUrl;
+                console.log(`[API Fallback] Switched activeBaseUrl to ${fallbackUrl}`);
+                return fallbackRes.data;
+            } catch (fallbackErr) {
+                console.error(`[API Error] Both endpoints failed for ${endpoint}`);
+            }
         }
-        throw error;
+
+        // Re-throw or format error
+        const msg = primaryErr.message ? primaryErr.message.toLowerCase() : '';
+        const isAuthOrNotFound = primaryErr.status === 404 || primaryErr.status === 403;
+        if (isConnectionErr || isAuthOrNotFound) {
+            console.warn(`[API Warning] ${endpoint}:`, primaryErr.message);
+        } else {
+            console.error(`[API Error] ${endpoint}:`, primaryErr.message);
+        }
+        throw primaryErr;
     }
 };
 
@@ -147,4 +175,24 @@ export const api = {
         body: JSON.stringify(locationData)
     }),
     getIncidentLocations: (incidentId) => fetchApi(`/incidents/${incidentId}/locations`),
+
+    // Live Location Sharing
+    startLocationShare: (sessionToken = null) => fetchApi('/locations/share/start', {
+        method: 'POST',
+        body: sessionToken ? JSON.stringify({ session_token: sessionToken }) : undefined
+    }),
+    updateLocationShare: (locationData) => fetchApi('/locations/share/update', {
+        method: 'POST',
+        body: JSON.stringify(locationData)
+    }),
+    stopLocationShare: () => fetchApi('/locations/share/stop', {
+        method: 'POST'
+    }),
+    getActiveLocationShare: () => fetchApi('/locations/share/active'),
+
+    // Location Safety Rating
+    getSafetyScore: (latitude, longitude, accuracy) => {
+        const accParam = accuracy ? `&accuracy=${accuracy}` : '';
+        return fetchApi(`/locations/safety-score?latitude=${latitude}&longitude=${longitude}${accParam}`);
+    },
 };

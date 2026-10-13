@@ -19,7 +19,8 @@ interface TrackData {
   latitude: number | null;
   longitude: number | null;
   accuracy: number | null;
-  last_updated: string | null;
+  last_updated?: string | null;
+  last_updated_at?: string | null;
   expires_at: string | null;
 }
 
@@ -35,28 +36,68 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({ token: propT
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  // Extract token from prop or URL
+  // Extract token and fallback coordinates from URL
   useEffect(() => {
     let resolvedToken = propToken || '';
+    const searchParams = new URLSearchParams(window.location.search);
+    let hashParams: URLSearchParams | null = null;
+    if (window.location.hash.includes('?')) {
+      const hashQuery = window.location.hash.substring(window.location.hash.indexOf('?') + 1);
+      hashParams = new URLSearchParams(hashQuery);
+    }
+
     if (!resolvedToken) {
-      const hash = window.location.hash;
-      const match = hash.match(/token=([a-zA-Z0-9_-]+)/);
-      if (match) {
-        resolvedToken = match[1];
-      } else {
-        const params = new URLSearchParams(window.location.search);
-        resolvedToken = params.get('token') || '';
+      resolvedToken = searchParams.get('token') || hashParams?.get('token') || '';
+      if (!resolvedToken) {
+        const match = window.location.href.match(/[?&]token=([^&#]+)/);
+        if (match) {
+          try {
+            resolvedToken = decodeURIComponent(match[1]);
+          } catch {
+            resolvedToken = match[1];
+          }
+        }
       }
     }
     setToken(resolvedToken);
+
+    // Initial / fallback coordinates embedded directly in the emergency link
+    const rawLat = searchParams.get('lat') || hashParams?.get('lat');
+    const rawLng = searchParams.get('lng') || hashParams?.get('lng');
+    const rawUser = searchParams.get('user') || hashParams?.get('user') || 'SafeHer User';
+
+    if (rawLat && rawLng) {
+      const parsedLat = parseFloat(rawLat);
+      const parsedLng = parseFloat(rawLng);
+      if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+        setData({
+          user_name: rawUser,
+          is_active: true,
+          latitude: parsedLat,
+          longitude: parsedLng,
+          accuracy: 20,
+          last_updated_at: new Date().toISOString(),
+          expires_at: null,
+        });
+        setLoading(false);
+      }
+    }
   }, [propToken]);
 
   const fetchTrackData = useCallback(async (isManual = false) => {
     if (!token) return;
     if (isManual) setIsRefreshing(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-      const res = await fetch(`${baseUrl}/locations/share/track/${token}`);
+      const getApiUrl = () => {
+        if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+        if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          return 'http://127.0.0.1:8000';
+        }
+        return 'https://women-safety-app-xo2h.onrender.com';
+      };
+      const baseUrl = getApiUrl().replace(/\/+$/, '');
+      const encodedToken = encodeURIComponent(token);
+      const res = await fetch(`${baseUrl}/locations/share/track/${encodedToken}`);
       if (!res.ok) {
         if (res.status === 404) {
           throw new Error('This tracking link has expired or is invalid.');
@@ -67,7 +108,15 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({ token: propT
       setData(json);
       setError(null);
     } catch (err: any) {
-      setError(err.message || 'Unable to load live location details.');
+      // If we already have coordinates from URL, show gentle status rather than blocking error
+      setData(prev => {
+        if (prev?.latitude && prev?.longitude) {
+          setError(null);
+          return prev;
+        }
+        setError(err.message || 'Unable to load live location details.');
+        return prev;
+      });
     } finally {
       setLoading(false);
       if (isManual) setIsRefreshing(false);
@@ -77,8 +126,13 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({ token: propT
   // Initial fetch and polling
   useEffect(() => {
     if (!token) {
-      setLoading(false);
-      setError('No tracking token provided in link.');
+      setData(prev => {
+        if (!prev) {
+          setLoading(false);
+          setError('No tracking token provided in link.');
+        }
+        return prev;
+      });
       return;
     }
 
@@ -160,8 +214,9 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({ token: propT
     }).addTo(map);
   }, [data]);
 
-  const isStale = data?.last_updated
-    ? (Date.now() - new Date(data.last_updated).getTime()) > 120000
+  const lastUpdatedTime = data?.last_updated_at || data?.last_updated;
+  const isStale = lastUpdatedTime
+    ? (Date.now() - new Date(lastUpdatedTime).getTime()) > 120000
     : false;
 
   return (
@@ -260,8 +315,8 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({ token: propT
               <div className="col-span-2 sm:col-span-1">
                 <p className="text-[10px] uppercase font-bold text-[#81747D]">Last Update</p>
                 <p className={`font-semibold mt-0.5 ${isStale ? 'text-amber-600' : 'text-[#28151D]'}`}>
-                  {data.last_updated
-                    ? `${new Date(data.last_updated).toLocaleTimeString()}${isStale ? ' (Stale)' : ''}`
+                  {lastUpdatedTime
+                    ? `${new Date(lastUpdatedTime).toLocaleTimeString()}${isStale ? ' (Stale)' : ''}`
                     : 'Not available'}
                 </p>
               </div>
@@ -272,6 +327,17 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({ token: propT
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>Device has not reported a location update in the last 2 minutes.</span>
               </div>
+            )}
+
+            {data.latitude != null && data.longitude != null && (
+              <a
+                href={`https://maps.google.com/?q=${data.latitude},${data.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#A61945] hover:bg-[#8A1439] text-white text-xs font-semibold shadow-xs transition-colors text-center"
+              >
+                Open in Google Maps
+              </a>
             )}
           </div>
         )}

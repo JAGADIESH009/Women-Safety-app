@@ -31,7 +31,8 @@
         "ACCESS_COARSE_LOCATION",
         "SEND_SMS",
         "CALL_PHONE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "RECORD_AUDIO"
       ],
 
       "package": "com.anonymous.mobile",
@@ -43,8 +44,15 @@
     "plugins": [
       "expo-location",
       "@react-native-google-signin/google-signin",
-      "expo-splash-screen"
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#780d2b"
+        }
+      ]
     ],
+
     "extra": {
       "eas": {
         "projectId": "a53bf15f-7c4f-41f3-a40b-02d48a90c62d"

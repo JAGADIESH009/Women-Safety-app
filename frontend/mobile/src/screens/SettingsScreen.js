@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Switch } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenWrapper } from '../components/ui/ScreenWrapper';
 import { SecondaryHeader } from '../components/ui/SecondaryHeader';
 import { Card } from '../components/ui/Card';
@@ -15,7 +16,11 @@ import {
   Bell, 
   CheckCircle2, 
   AlertCircle, 
-  ExternalLink 
+  ExternalLink,
+  Smartphone,
+  Mic,
+  ShieldAlert,
+  Info
 } from 'lucide-react-native';
 import { 
   checkAllPermissions, 
@@ -23,9 +28,11 @@ import {
   requestSmsPermission, 
   requestPhonePermission, 
   requestNotificationPermission, 
+  requestMicrophonePermission,
   openAppSettings,
   PERMISSION_DESCRIPTIONS 
 } from '../services/permissions';
+import { voiceDetector } from '../services/voiceDetector';
 
 export function SettingsScreen() {
   const { colors, isDark, shadows } = useAppTheme();
@@ -36,8 +43,13 @@ export function SettingsScreen() {
     sms: false,
     phone: false,
     notifications: false,
+    microphone: false,
   });
   const [isChecking, setIsChecking] = useState(true);
+
+  // Safety trigger states
+  const [shakeEnabled, setShakeEnabled] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
 
   const refreshPermissions = useCallback(async () => {
     setIsChecking(true);
@@ -51,9 +63,51 @@ export function SettingsScreen() {
     }
   }, []);
 
+  const loadTriggerSettings = useCallback(async () => {
+    try {
+      const shakeVal = await AsyncStorage.getItem('safeher_shake_sos_enabled');
+      setShakeEnabled(shakeVal !== 'false');
+      const voiceVal = await AsyncStorage.getItem('safeher_voice_sos_enabled');
+      setVoiceEnabled(voiceVal !== 'false');
+    } catch (e) {
+      console.log('Error loading trigger settings:', e);
+    }
+  }, []);
+
   useEffect(() => {
     refreshPermissions();
-  }, [refreshPermissions]);
+    loadTriggerSettings();
+  }, [refreshPermissions, loadTriggerSettings]);
+
+  const handleToggleShake = async (val) => {
+    setShakeEnabled(val);
+    try {
+      await AsyncStorage.setItem('safeher_shake_sos_enabled', val ? 'true' : 'false');
+    } catch (e) {
+      console.warn('Failed to save shake SOS setting:', e);
+    }
+  };
+
+  const handleToggleVoice = async (val) => {
+    if (val) {
+      const granted = await voiceDetector.requestPermissions();
+      if (!granted) {
+        Alert.alert(
+          'Microphone Permission Required',
+          'Voice SOS requires microphone permission to detect "SafeHer SOS". Please enable microphone access.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    setVoiceEnabled(val);
+    try {
+      await AsyncStorage.setItem('safeher_voice_sos_enabled', val ? 'true' : 'false');
+    } catch (e) {
+      console.warn('Failed to save voice SOS setting:', e);
+    }
+    await refreshPermissions();
+  };
 
   const handleRequest = async (type) => {
     let granted = false;
@@ -65,6 +119,8 @@ export function SettingsScreen() {
       granted = await requestPhonePermission();
     } else if (type === 'notifications') {
       granted = await requestNotificationPermission();
+    } else if (type === 'microphone') {
+      granted = await requestMicrophonePermission();
     }
     await refreshPermissions();
     return granted;
@@ -108,6 +164,66 @@ export function SettingsScreen() {
               onPress={() => changeThemePreference('system')}
               colors={colors}
               styles={styles}
+            />
+          </View>
+        </Card>
+
+        {/* EMERGENCY SOS TRIGGERS */}
+        <Text style={styles.sectionTitle}>EMERGENCY SOS TRIGGERS</Text>
+        <Card style={styles.card} variant="flat">
+          <Text style={styles.cardDesc}>
+            Automated emergency triggers start the shared 5-second countdown with immediate cancellation option.
+          </Text>
+
+          {/* Shake-to-SOS */}
+          <View style={styles.triggerRow}>
+            <View style={styles.triggerInfo}>
+              <View style={styles.triggerTitleRow}>
+                <Smartphone size={20} color={shakeEnabled ? colors.accentSafe : colors.textSecondary} />
+                <Text style={styles.triggerTitle}>Shake to SOS</Text>
+              </View>
+              <Text style={styles.triggerDesc}>
+                Detects a deliberate high-acceleration shake pattern (&gt;2.2g with directional reversals) to trigger the 5-second SOS confirmation countdown.
+              </Text>
+              <Text style={styles.warningNote}>
+                Warning: Vigorous movement or dropping the phone may trigger detection. Cancel within 5 seconds to prevent alert dispatch.
+              </Text>
+              <Text style={styles.limitNote}>
+                Platform note: Operates while the SafeHer app is open or active in the foreground.
+              </Text>
+            </View>
+            <Switch
+              value={shakeEnabled}
+              onValueChange={handleToggleShake}
+              trackColor={{ false: colors.bgTertiary, true: colors.accentSafe }}
+              thumbColor={Platform.OS === 'android' ? (shakeEnabled ? '#FFFFFF' : '#DDDDDD') : undefined}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Voice-Triggered SOS */}
+          <View style={styles.triggerRow}>
+            <View style={styles.triggerInfo}>
+              <View style={styles.triggerTitleRow}>
+                <Mic size={20} color={voiceEnabled ? colors.accentSafe : colors.textSecondary} />
+                <Text style={styles.triggerTitle}>Voice-Triggered SOS</Text>
+              </View>
+              <Text style={styles.triggerDesc}>
+                Listens for the emergency trigger phrase: <Text style={{ fontWeight: '700', color: colors.accentBrand }}>"SafeHer SOS"</Text>. Initiates the shared 5-second cancellation countdown.
+              </Text>
+              <Text style={styles.privacyNote}>
+                Privacy: On-device speech recognition via operating system engine. Zero audio recordings are stored, saved, or uploaded to any server.
+              </Text>
+              <Text style={styles.limitNote}>
+                Platform note: Background microphone access is restricted by Android OS policies. Listening is active while the app is foregrounded.
+              </Text>
+            </View>
+            <Switch
+              value={voiceEnabled}
+              onValueChange={handleToggleVoice}
+              trackColor={{ false: colors.bgTertiary, true: colors.accentSafe }}
+              thumbColor={Platform.OS === 'android' ? (voiceEnabled ? '#FFFFFF' : '#DDDDDD') : undefined}
             />
           </View>
         </Card>
@@ -165,6 +281,18 @@ export function SettingsScreen() {
             styles={styles}
           />
 
+          <View style={styles.divider} />
+
+          <PermissionItem
+            icon={<Mic size={20} color={permissions.microphone ? colors.accentSafe : colors.accentWarning} />}
+            title="Microphone (Voice SOS)"
+            description={PERMISSION_DESCRIPTIONS.microphone.purpose}
+            isGranted={permissions.microphone}
+            onRequest={() => handleRequest('microphone')}
+            colors={colors}
+            styles={styles}
+          />
+
           <TouchableOpacity 
             style={styles.openSettingsBtn} 
             activeOpacity={0.7} 
@@ -178,6 +306,7 @@ export function SettingsScreen() {
     </ScreenWrapper>
   );
 }
+
 
 function ThemeOption({ icon, label, isActive, onPress, colors, styles }) {
   return (
@@ -389,4 +518,49 @@ const getStyles = (colors, isDark, shadows) => StyleSheet.create({
     color: colors.accentBrand,
     fontWeight: '600',
   },
+  triggerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  triggerInfo: {
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
+  triggerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  triggerTitle: {
+    ...typography.bodySemibold,
+    color: colors.textPrimary,
+  },
+  triggerDesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  warningNote: {
+    ...typography.caption2,
+    color: colors.accentWarning,
+    lineHeight: 15,
+    marginBottom: 4,
+  },
+  privacyNote: {
+    ...typography.caption2,
+    color: colors.accentSafe,
+    lineHeight: 15,
+    marginBottom: 4,
+  },
+  limitNote: {
+    ...typography.caption2,
+    color: colors.textTertiary,
+    lineHeight: 14,
+  },
 });
+

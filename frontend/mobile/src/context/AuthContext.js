@@ -170,10 +170,14 @@ export const AuthProvider = ({ children }) => {
       try {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
         
-        // This handles both v11+ (data object) and older versions
+        // Handles v16+ response shape ({ data: { idToken, ... } } or { type: 'cancelled' })
         const response = await GoogleSignin.signIn();
-        const idToken = response.data ? response.data.idToken : response.idToken;
-        
+        if (response?.type === 'cancelled') {
+          console.log('[Google Sign-In] Cancelled by user');
+          return null;
+        }
+
+        const idToken = response?.data ? response.data.idToken : response?.idToken;
         if (!idToken) {
            throw new Error("Google Sign-In failed: No ID token returned");
         }
@@ -182,16 +186,29 @@ export const AuthProvider = ({ children }) => {
         const result = await signInWithCredential(auth, credential);
         return result.user;
       } catch (error) {
-        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-          throw new Error('auth/popup-closed-by-user'); // map to existing error string expected by UI
+        console.error("[Google Sign-In Error]:", {
+          code: error.code,
+          message: error.message,
+          error
+        });
+
+        if (error.code === statusCodes.SIGN_IN_CANCELLED || error.message?.includes('cancelled')) {
+          return null;
         } else if (error.code === statusCodes.IN_PROGRESS) {
           throw new Error('Sign in is already in progress');
         } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
           throw new Error('Google Play Services not available or outdated');
-        } else if (error.code === '12500' || (error.message && (error.message.includes('12500') || error.message.includes('non-recoverable sign in failure')))) {
-          throw new Error('Google Sign-In configuration error: The app\'s signing certificate fingerprint (SHA-1) does not match the one registered in Firebase Console.');
+        } else if (
+          error.code === statusCodes.DEVELOPER_ERROR ||
+          error.code === '10' ||
+          error.code === 10 ||
+          error.code === '12500' ||
+          (error.message && (error.message.includes('DEVELOPER_ERROR') || error.message.includes('10') || error.message.includes('12500')))
+        ) {
+          throw new Error(
+            'Google Sign-In Error (12500 / DEVELOPER_ERROR): Google Play Services was unable to verify the OAuth client. Verify that the app certificate fingerprint and package "com.anonymous.mobile" match Google Cloud Console and that the OAuth consent screen has a Support Email.'
+          );
         } else {
-          console.error("Google Sign-In Error:", error);
           throw new Error(error.message || 'An unexpected error occurred during Google Sign-In');
         }
       }

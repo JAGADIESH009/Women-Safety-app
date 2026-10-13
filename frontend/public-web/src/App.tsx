@@ -20,17 +20,33 @@ import { LiveTrackingView } from './components/LiveTrackingView';
 
 import type { PageView } from './types';
 
+const isTrackRoute = () => {
+  if (typeof window === 'undefined') return false;
+  const searchParams = new URLSearchParams(window.location.search);
+  const fullHash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
+  const baseHash = fullHash.split('?')[0];
+  const pathName = window.location.pathname.toLowerCase().replace(/^\//, '');
+  return searchParams.has('token') || baseHash === 'track' || fullHash.startsWith('track') || pathName === 'track' || pathName.startsWith('track/');
+};
+
 export const AppContent: React.FC = () => {
   const { user, isGuest, loading } = useAuth();
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<PageView | 'not-found'>('welcome');
+  const [currentView, setCurrentView] = useState<PageView | 'not-found'>(() => {
+    return isTrackRoute() ? 'track' : 'welcome';
+  });
 
   // Synchronize route with URL hash and authentication state
   useEffect(() => {
-    if (loading) return;
-
     const syncRouteFromHash = () => {
-      const fullHash = window.location.hash.replace('#', '').toLowerCase();
+      if (isTrackRoute()) {
+        setCurrentView('track');
+        return;
+      }
+
+      if (loading) return;
+
+      const fullHash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
       const baseHash = fullHash.split('?')[0];
 
       const validAppViews: PageView[] = [
@@ -50,11 +66,6 @@ export const AppContent: React.FC = () => {
         'track',
       ];
 
-      if (baseHash === 'track' || fullHash.startsWith('track')) {
-        setCurrentView('track');
-        return;
-      }
-
       if (!baseHash || baseHash === 'welcome') {
         if (user) {
           setCurrentView('dashboard');
@@ -71,7 +82,11 @@ export const AppContent: React.FC = () => {
 
     syncRouteFromHash();
     window.addEventListener('hashchange', syncRouteFromHash);
-    return () => window.removeEventListener('hashchange', syncRouteFromHash);
+    window.addEventListener('popstate', syncRouteFromHash);
+    return () => {
+      window.removeEventListener('hashchange', syncRouteFromHash);
+      window.removeEventListener('popstate', syncRouteFromHash);
+    };
   }, [user, isGuest, loading]);
 
   const navigateTo = (view: PageView) => {
@@ -80,7 +95,12 @@ export const AppContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Loading Splash Screen
+  // Standalone recipient tracking view (PUBLIC - ZERO AUTH DEPENDENCY)
+  if (currentView === 'track' || isTrackRoute()) {
+    return <LiveTrackingView onNavigate={navigateTo} />;
+  }
+
+  // Loading Splash Screen (only for authenticated app routes)
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF7F6] flex flex-col items-center justify-center p-6 text-center">
@@ -109,11 +129,6 @@ export const AppContent: React.FC = () => {
         />
       </>
     );
-  }
-
-  // Standalone recipient tracking view
-  if (currentView === 'track') {
-    return <LiveTrackingView onNavigate={navigateTo} />;
   }
 
   const renderCurrentView = () => {

@@ -1,52 +1,138 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { sendEmergencySMS, buildEmergencyMessage, initiateEmergencyCall }
   from '../services/emergencyCommunication';
 import * as Location from 'expo-location';
+import { getFastLocation } from '../hooks/useLocation';
 import { getReverseGeocode } from '../utils/geocoding';
 import { api } from '../services/api';
 
 const EmergencyContext = createContext();
 
 export const EmergencyProvider = ({ children }) => {
+  // SOS State Machine: 'idle' | 'pending_confirmation' | 'cancelled' | 'submitting' | 'active' | 'failed' | 'ended'
+  const [sosStatus, setSosStatus] = useState('idle');
+  const [pendingTrigger, setPendingTrigger] = useState(null); // { triggerSource, idempotencyKey, startedAt }
+  const [countdownRemaining, setCountdownRemaining] = useState(5.0);
+
   const [isEmergencyActive, setIsEmergencyActive] = useState(false);
   const [activeIncident, setActiveIncident] = useState(null);
   const [isEmergencyLoading, setIsEmergencyLoading] = useState(true);
+
+  // Live Location Sharing state
+  const [isSharingActive, setIsSharingActive] = useState(false);
+  const [sharingSession, setSharingSession] = useState(null);
+  const [sharingError, setSharingError] = useState(null);
+  const [lastShareUploadTime, setLastShareUploadTime] = useState(null);
+
   const { user } = useAuth();
+
+  // Refs for timers and subscriptions
+  const countdownTimerRef = useRef(null);
+  const countdownIntervalRef = useRef(null);
+  const locationWatchSubscriptionRef = useRef(null);
+  const cachedContactsRef = useRef([]);
+
+  const prefetchContacts = useCallback(async () => {
+    try {
+      let rawContacts = [];
+      if (user?.uid) {
+        const userStored = await AsyncStorage.getItem(`women_safety_contacts_${user.uid}`);
+        if (userStored) rawContacts = JSON.parse(userStored);
+      }
+      if (!rawContacts || rawContacts.length === 0) {
+        const globalStored = await AsyncStorage.getItem('women_safety_contacts');
+        if (globalStored) {
+          const all = JSON.parse(globalStored);
+          rawContacts = user?.uid ? all.filter(c => !c.userId || c.userId === user.uid) : all;
+        }
+      }
+      if (rawContacts && rawContacts.length > 0) {
+        cachedContactsRef.current = rawContacts;
+      }
+    } catch (e) {}
+  }, [user?.uid]);
+
+  const getPrimaryContactFast = async () => {
+    if (cachedContactsRef.current && cachedContactsRef.current.length > 0) {
+      const primary = cachedContactsRef.current.find(c => (c.isPrimary || c.is_primary) && c.enabled !== false)
+        || cachedContactsRef.current.find(c => c.enabled !== false && c.phone)
+        || cachedContactsRef.current[0];
+      if (primary) return primary;
+    }
+    try {
+      if (user?.uid) {
+        const userStored = await AsyncStorage.getItem(`women_safety_contacts_${user.uid}`);
+        if (userStored) {
+          const list = JSON.parse(userStored);
+          if (Array.isArray(list) && list.length > 0) {
+            cachedContactsRef.current = list;
+            return list.find(c => (c.isPrimary || c.is_primary) && c.enabled !== false) || list[0];
+          }
+        }
+      }
+      const globalStored = await AsyncStorage.getItem('women_safety_contacts');
+      if (globalStored) {
+        const list = JSON.parse(globalStored);
+        if (Array.isArray(list) && list.length > 0) {
+          cachedContactsRef.current = list;
+          return list.find(c => (c.isPrimary || c.is_primary) && c.enabled !== false) || list[0];
+        }
+      }
+    } catch (e) {}
+    return null;
+  };
 
   useEffect(() => {
     if (user) {
       loadState();
+      checkActiveSharingSession();
+      prefetchContacts();
     } else {
       // Clear state when user logs out
+      stopLiveSharingInternal();
+      cancelSOSTriggerInternal();
       setIsEmergencyActive(false);
       setActiveIncident(null);
+      setSosStatus('idle');
       setIsEmergencyLoading(false);
     }
-  }, [user]);
+  }, [user, prefetchContacts]);
 
   const loadState = async () => {
     try {
-      console.log('loadState: calling AsyncStorage.getItem');
       const stored = await AsyncStorage.getItem('women_safety_emergency');
-      console.log('loadState: AsyncStorage.getItem returned', !!stored);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Only load active incident if it belongs to the current user
-        if (parsed.incident && parsed.incident.userId === user?.uid) {
-          setIsEmergencyActive(parsed.isActive);
+        if (parsed.incident && parsed.incident.userId === user?.uid && parsed.isActive) {
+          setIsEmergencyActive(true);
           setActiveIncident(parsed.incident);
+          setSosStatus('active');
         } else if (parsed.isActive === false) {
           setIsEmergencyActive(false);
           setActiveIncident(null);
+          setSosStatus('idle');
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error loading emergency state:', e);
     } finally {
-      console.log('loadState: setting isEmergencyLoading(false)');
       setIsEmergencyLoading(false);
+    }
+  };
+
+  const checkActiveSharingSession = async () => {
+    try {
+      const active = await api.getActiveLocationShare();
+      if (active && active.is_active) {
+        setIsSharingActive(true);
+        setSharingSession(active);
+        setLastShareUploadTime(active.last_updated || new Date().toISOString());
+        startLocationWatcher(active.session_token);
+      }
+    } catch (e) {
+      // Offline or no active session
     }
   };
 
@@ -61,68 +147,197 @@ export const EmergencyProvider = ({ children }) => {
     }
   };
 
-  const activateEmergency = async (fallbackLocation, triggerType = 'MANUAL_SOS') => {
+  // ==========================================
+  // SHARED SOS STATE MACHINE
+  // ==========================================
+
+  const cancelSOSTriggerInternal = () => {
+    if (countdownTimerRef.current) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setPendingTrigger(null);
+    setCountdownRemaining(5.0);
+  };
+
+  const cancelSOSTrigger = useCallback(() => {
+    if (sosStatus === 'pending_confirmation') {
+      console.log('[SOS State Machine] SOS Trigger Cancelled by user before expiry.');
+      cancelSOSTriggerInternal();
+      setSosStatus('cancelled');
+      // Reset back to idle after short UI acknowledgement
+      setTimeout(() => {
+        setSosStatus('idle');
+      }, 700);
+    }
+  }, [sosStatus]);
+
+  const requestSOSTrigger = useCallback((triggerSource = 'MANUAL', requireConfirmation = true, fallbackLocation = null) => {
+    // Idempotency and duplicate prevention: If an SOS is already pending, submitting, or active, reject new trigger
+    if (sosStatus === 'pending_confirmation' || sosStatus === 'submitting' || sosStatus === 'active') {
+      console.warn(`[SOS State Machine] Duplicate trigger rejected. Current state: ${sosStatus}`);
+      return false;
+    }
+
+    const idempotencyKey = `sos-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    if (!requireConfirmation) {
+      // Immediate submission (e.g., long-press manual button finished)
+      console.log(`[SOS State Machine] Direct submission triggered via ${triggerSource}`);
+      activateEmergency(fallbackLocation, triggerSource, idempotencyKey);
+      return true;
+    }
+
+    // Enter pending confirmation state with 5.0 second countdown
+    console.log(`[SOS State Machine] Entering pending_confirmation from ${triggerSource}`);
+    setSosStatus('pending_confirmation');
+    setPendingTrigger({
+      triggerSource,
+      idempotencyKey,
+      startedAt: Date.now()
+    });
+    setCountdownRemaining(5.0);
+
+    const startTime = Date.now();
+    const durationMs = 5000;
+
+    countdownIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, (durationMs - elapsed) / 1000);
+      setCountdownRemaining(parseFloat(remaining.toFixed(1)));
+      if (remaining <= 0) {
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+      }
+    }, 100);
+
+    countdownTimerRef.current = setTimeout(() => {
+      console.log(`[SOS State Machine] 5s countdown expired without cancellation. Triggering SOS...`);
+      cancelSOSTriggerInternal();
+      activateEmergency(fallbackLocation, triggerSource, idempotencyKey);
+    }, durationMs);
+
+    return true;
+  }, [sosStatus]);
+
+  const activateEmergency = async (fallbackLocation, triggerType = 'MANUAL', idempotencyKey = null) => {
+    // Atomically transition to submitting
+    setSosStatus('submitting');
     const now = new Date();
+    const resolvedKey = idempotencyKey || `sos-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    let locationData = fallbackLocation;
-    // Discard stale fallback location (> 2 minutes old)
-    if (locationData && locationData.timestamp) {
-      if ((Date.now() - locationData.timestamp) > 120000) {
-        console.log('SOS fallback location is stale. Discarding.');
-        locationData = null;
-      }
-    }
-
+    // =========================================================================
+    // 1. INSTANT EMERGENCY CALL DISPATCH (ZERO DELAY)
+    // Emergency calls must be placed immediately upon SOS activation without waiting
+    // for GPS acquisition, network APIs, or SMS loops!
+    // =========================================================================
+    let callPromise = null;
+    let targetDialNumber = '112';
+    let primaryTargetContact = null;
     try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status === 'granted') {
-         const lastKnown = await Location.getLastKnownPositionAsync();
-         if (lastKnown && (!locationData || lastKnown.timestamp > locationData.timestamp)) {
-             locationData = {
-                 lat: lastKnown.coords.latitude,
-                 lng: lastKnown.coords.longitude,
-                 accuracy: Math.round(lastKnown.coords.accuracy || 0),
-                 timestamp: lastKnown.timestamp,
-                 addressLabel: null
-             };
-         }
-      }
-    } catch (e) {
-      console.log('Error getting initial quick location', e);
+      primaryTargetContact = await getPrimaryContactFast();
+      let storedEmergencyNumber = null;
+      try {
+        storedEmergencyNumber = await AsyncStorage.getItem('safeher_emergency_number');
+      } catch (e) {}
+      targetDialNumber = primaryTargetContact?.phone || storedEmergencyNumber || '112';
+      console.log(`[SOS Instant Call] Instantly launching emergency call to: ${targetDialNumber} (Contact: ${primaryTargetContact?.name || 'Primary'})`);
+      callPromise = initiateEmergencyCall(primaryTargetContact, targetDialNumber);
+    } catch (callErr) {
+      console.error('[SOS Instant Call] Error initiating immediate emergency call:', callErr);
     }
 
-    const formattedLocation = locationData && typeof locationData.lat === 'number' && typeof locationData.lng === 'number' ? {
-      latitude: locationData.lat,
-      longitude: locationData.lng,
+    // =========================================================================
+    // 2. ULTRA-FAST LOCATION RESOLUTION
+    // Check fallbackLocation first, then fast location service cache
+    // =========================================================================
+    let locationData = fallbackLocation;
+    if (!locationData || (locationData.lat == null && locationData.latitude == null)) {
+      try {
+        locationData = await getFastLocation();
+      } catch (locErr) {
+        console.log('[SOS Location] Fast location lookup:', locErr.message);
+      }
+    }
+
+    const formattedLocation = locationData && (typeof locationData.lat === 'number' || typeof locationData.latitude === 'number') ? {
+      latitude: locationData.latitude ?? locationData.lat,
+      longitude: locationData.longitude ?? locationData.lng,
       accuracy: locationData.accuracy || 0,
       timestamp: new Date(locationData.timestamp || now.getTime()).toISOString(),
       addressLabel: locationData.addressLabel || null
     } : null;
 
     let initialTimeline = [
-      { time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), event: 'SOS activated', location: formattedLocation }
+      { time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), event: `SOS activated via ${triggerType}`, location: formattedLocation }
     ];
 
+    // Load Emergency Contacts for SMS dispatch
     let selectedContacts = [];
     try {
-      const contactsStore = await AsyncStorage.getItem('women_safety_contacts');
-      if (contactsStore) {
-        const parsedContacts = JSON.parse(contactsStore).filter(c => (c.userId === user?.uid || !c.userId) && c.enabled !== false);
-        if (parsedContacts.length > 0) {
-          initialTimeline.push({ time: new Date(now.getTime() + 100).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), event: 'Emergency contacts ready' });
-          selectedContacts = parsedContacts;
+      let rawContacts = cachedContactsRef.current;
+      if (!rawContacts || rawContacts.length === 0) {
+        if (user?.uid) {
+          const userStored = await AsyncStorage.getItem(`women_safety_contacts_${user.uid}`);
+          if (userStored) rawContacts = JSON.parse(userStored);
         }
+      }
+      if (!rawContacts || rawContacts.length === 0) {
+        const globalStored = await AsyncStorage.getItem('women_safety_contacts');
+        if (globalStored) {
+          const all = JSON.parse(globalStored);
+          rawContacts = user?.uid ? all.filter(c => !c.userId || c.userId === user.uid) : all;
+        }
+      }
+      if (!rawContacts || rawContacts.length === 0) {
+        try {
+          const cloudContacts = await Promise.race([
+            api.getContacts(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 1500))
+          ]);
+          if (Array.isArray(cloudContacts) && cloudContacts.length > 0) {
+            rawContacts = cloudContacts.map(bc => ({
+              id: bc.id.toString(),
+              backendId: bc.id,
+              userId: user?.uid,
+              name: bc.name,
+              phone: bc.phone,
+              relation: bc.relation,
+              isPrimary: bc.is_primary,
+              enabled: true
+            }));
+          }
+        } catch (e) {}
+      }
+
+      const activeContacts = (rawContacts || [])
+        .filter(c => c && c.phone && c.enabled !== false)
+        .map(c => ({
+          ...c,
+          enabled: c.enabled !== false
+        }));
+
+      if (activeContacts.length > 0) {
+        activeContacts.sort((a, b) => ((b.isPrimary || b.is_primary) ? 1 : 0) - ((a.isPrimary || a.is_primary) ? 1 : 0));
+        cachedContactsRef.current = activeContacts;
+        selectedContacts = activeContacts;
       }
     } catch (e) {
       console.error('Failed to read contacts during SOS activation', e);
     }
-
 
     const newIncident = {
       id: `#INC-${Math.floor(100000 + Math.random() * 900000)}`,
       userId: user?.uid,
       type: 'SOS Emergency',
       triggerType,
+      idempotencyKey: resolvedKey,
       status: 'ACTIVE',
       createdAt: now.toISOString(),
       endedAt: null,
@@ -130,22 +345,28 @@ export const EmergencyProvider = ({ children }) => {
       initialLocation: formattedLocation,
       latestLocation: formattedLocation,
       emergencyContacts: selectedContacts.map(c => ({ ...c, status: 'PENDING' })),
-      riskScore: 72,
+      riskScore: 75,
       timeline: initialTimeline
     };
 
     setIsEmergencyActive(true);
     setActiveIncident(newIncident);
+    setSosStatus('active');
     saveState(true, newIncident);
 
-    // Background sync to create incident on backend
+    // Sync to backend asynchronously
     (async () => {
       try {
-        const backendIncident = await api.createIncident({ type: newIncident.type });
+        const backendIncident = await api.createIncident({
+          type: newIncident.type,
+          trigger_source: triggerType,
+          idempotency_key: resolvedKey,
+          description: `Triggered via ${triggerType}`
+        });
+
         if (backendIncident && backendIncident.id) {
           setActiveIncident(prev => {
              if (!prev || prev.id !== newIncident.id) return prev;
-             // Flush any locations that queued up while waiting for creation
              const unsynced = prev.unsyncedLocations || [];
              unsynced.forEach(loc => {
                 api.addLocation(backendIncident.id, {
@@ -169,35 +390,76 @@ export const EmergencyProvider = ({ children }) => {
       }
     })();
 
-    // Fire off native communications immediately
+    // Generate client-side session token IMMEDIATELY (0ms) so Live Tracking link is ALWAYS present in SMS
+    const liveSessionToken = sharingSession?.session_token || ('sh_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now());
+    const configuredBase = (process.env.EXPO_PUBLIC_WEB_URL || 'https://safeherweb.vercel.app').replace(/\/+$/, '');
+
+    // Start Live Location Sharing session on backend concurrently without blocking SMS dispatch
+    if (user) {
+      startLiveSharing(liveSessionToken).catch(shareErr => {
+        console.warn('[SOS Emergency] Live sharing background start note:', shareErr.message);
+      });
+    }
+
+    // Fire off native communications concurrently
     const executeCommunications = async (incidentToUpdate, locationToUse) => {
+      // Ensure resolved location coordinates
+      let resolvedLoc = locationToUse;
+      if (!resolvedLoc || (resolvedLoc.latitude == null && resolvedLoc.lat == null)) {
+        try {
+          const fast = await getFastLocation();
+          if (fast) {
+            resolvedLoc = {
+              latitude: fast.lat ?? fast.latitude,
+              longitude: fast.lng ?? fast.longitude,
+              addressLabel: fast.addressLabel
+            };
+          }
+        } catch (e) {}
+      }
+
+      const resLat = resolvedLoc?.latitude ?? resolvedLoc?.lat;
+      const resLng = resolvedLoc?.longitude ?? resolvedLoc?.lng;
+
+      let senderName = user?.name || user?.displayName || 'User';
+      if ((!senderName || senderName === 'User') && user?.uid) {
+        try {
+          const profileStr = await AsyncStorage.getItem(`@profile_${user.uid}`);
+          if (profileStr) {
+            const parsed = JSON.parse(profileStr);
+            if (parsed.name) senderName = parsed.name;
+          }
+        } catch (e) {}
+      }
+
+      let trackingUrlWithCoords = `${configuredBase}/track?token=${encodeURIComponent(liveSessionToken)}`;
+      if (resLat != null && resLng != null) {
+        trackingUrlWithCoords += `&lat=${encodeURIComponent(Number(resLat).toFixed(6))}&lng=${encodeURIComponent(Number(resLng).toFixed(6))}&user=${encodeURIComponent(senderName)}`;
+      }
+
       const message = buildEmergencyMessage(
-        user?.displayName || 'User',
+        senderName,
         'SOS',
-        locationToUse?.addressLabel,
-        locationToUse?.latitude,
-        locationToUse?.longitude,
-        false
+        resolvedLoc?.addressLabel,
+        resLat,
+        resLng,
+        false,
+        trackingUrlWithCoords
       );
 
       console.log('SMS payload constructed:', message);
       let updatedIncident = { ...incidentToUpdate };
 
-      // ==========================================
-      // 1. SMS LOGIC (INDEPENDENT)
-      // ==========================================
+      // Dispatch SMS
       try {
-        console.log('--- [SMS] BEFORE sendEmergencySMS (Context) ---');
         const smsResults = await sendEmergencySMS(selectedContacts, message);
-        console.log(`--- [SMS] AFTER sendEmergencySMS, result length: ${smsResults ? smsResults.length : 0} ---`);
-
         const currentTimeline = [...updatedIncident.timeline];
         smsResults.forEach(res => {
           const cIndex = updatedIncident.emergencyContacts.findIndex(c => c.id === res.contact.id);
           if (cIndex >= 0) {
             updatedIncident.emergencyContacts[cIndex].status = res.status;
           }
-          let eventText = `SMS ${res.status === 'DISPATCHED' ? 'dispatched to' : (res.status === 'QUEUED' ? 'queued for' : 'failed for')} ${res.contact.name || 'Contact'}`;
+          let eventText = `SMS ${res.status === 'DISPATCHED' ? 'dispatched to' : (res.status === 'COMPOSER_OPENED' ? 'composer opened for' : (res.status === 'QUEUED' ? 'queued for' : 'failed for'))} ${res.contact.name || 'Contact'}`;
           if (res.error) eventText += ` (${res.error})`;
           currentTimeline.push({
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -209,56 +471,32 @@ export const EmergencyProvider = ({ children }) => {
         setActiveIncident(prev => {
            if (!prev) return prev;
            const newTimeline = [...prev.timeline];
-           // Append new sms timeline events that aren't in prev
            const newEvents = currentTimeline.slice(incidentToUpdate.timeline.length);
            const finalInc = { ...prev, emergencyContacts: updatedIncident.emergencyContacts, timeline: [...newTimeline, ...newEvents] };
            saveState(true, finalInc);
            return finalInc;
         });
       } catch (err) {
-        console.error('--- [SMS] EXCEPTION in sendEmergencySMS block ---', err);
+        console.error('Exception in sendEmergencySMS:', err);
       }
 
-      // ==========================================
-      // 2. CALL LOGIC (INDEPENDENT)
-      // ==========================================
-      try {
-        const primaryContact = selectedContacts.find(c => c.isPrimary && c.enabled) || selectedContacts.find(c => c.enabled) || selectedContacts[0];
-        if (primaryContact) {
-          console.log(`--- [CALL] BEFORE initiateEmergencyCall to ${primaryContact.name} ---`);
-          const callResult = await initiateEmergencyCall(primaryContact);
-          console.log(`--- [CALL] AFTER initiateEmergencyCall, status: ${callResult?.status} ---`);
-          
-          let eventText = `Call unavailable for ${primaryContact.name || 'Primary'}`;
-          if (callResult.status === 'DIALER_OPENED') {
-            eventText = `Call ready — ${primaryContact.name || 'Primary'}`;
-          } else if (callResult.status === 'CALL_INITIATED') {
-            eventText = `Call initiated to ${primaryContact.name || 'Primary'}`;
+      // Record Call status from the instant call promise
+      if (callPromise) {
+        try {
+          const callResult = await callPromise;
+          let eventText = `Emergency call initiated to ${primaryTargetContact?.name ? `${primaryTargetContact.name} (${targetDialNumber})` : targetDialNumber}`;
+          if (callResult.status === 'CALL_PLACED') {
+            eventText = `Calling ${primaryTargetContact?.name || 'Primary Contact'} (${targetDialNumber})`;
+          } else if (callResult.status === 'DIALER_OPENED') {
+            eventText = `Dialer opened for ${primaryTargetContact?.name || callResult.number || targetDialNumber}`;
           } else if (callResult.error) {
-            eventText += ` (${callResult.error})`;
+            eventText = `Call status: ${callResult.error}`;
           }
-          
-          setActiveIncident(prev => {
-              if (!prev) return prev;
-              const finalInc = {
-                  ...prev,
-                  timeline: [
-                      ...prev.timeline,
-                      {
-                          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                          event: eventText,
-                          location: prev.latestLocation
-                      }
-                  ]
-              };
-              saveState(true, finalInc);
-              return finalInc;
-          });
-        } else {
-          console.log('--- [CALL] No primary contact found for Call ---');
+
+          addTimelineEvent(eventText);
+        } catch (callErr) {
+          console.error('[SOS Call] Error resolving call status:', callErr);
         }
-      } catch (err) {
-        console.error('--- [CALL] EXCEPTION in initiateEmergencyCall block ---', err);
       }
     };
 
@@ -267,36 +505,30 @@ export const EmergencyProvider = ({ children }) => {
     // Request High Accuracy GPS in the background
     (async () => {
       try {
-        console.log('SOS Background: Requesting fresh location...');
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const servicesEnabled = await Location.hasServicesEnabledAsync();
-          if (servicesEnabled) {
-            const freshLocation = await Promise.race([
-              Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-                maximumAge: 5000,
-              }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 10000))
-            ]);
-            
-            console.log('SOS Background GPS acquired:', freshLocation.coords.latitude, freshLocation.coords.longitude);
-            let addressLabel = null;
-            try {
-              addressLabel = await getReverseGeocode(freshLocation.coords.latitude, freshLocation.coords.longitude);
-            } catch (e) {}
+        const freshLocation = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+            maximumAge: 3000,
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 6000))
+        ]);
+        
+        if (freshLocation?.coords) {
+          let addressLabel = null;
+          try {
+            addressLabel = await getReverseGeocode(freshLocation.coords.latitude, freshLocation.coords.longitude);
+          } catch (e) {}
 
-            updateIncidentLocation({
-              lat: freshLocation.coords.latitude,
-              lng: freshLocation.coords.longitude,
-              accuracy: Math.round(freshLocation.coords.accuracy || 0),
-              addressLabel: addressLabel
-            });
-            addTimelineEvent('High-accuracy location acquired');
-          }
+          updateIncidentLocation({
+            lat: freshLocation.coords.latitude,
+            lng: freshLocation.coords.longitude,
+            accuracy: Math.round(freshLocation.coords.accuracy || 0),
+            addressLabel: addressLabel
+          });
+          addTimelineEvent('High-accuracy GPS location acquired');
         }
       } catch (e) {
-        console.log('SOS Background GPS failed or timed out:', e);
+        console.log('SOS Background GPS update note:', e.message);
       }
     })();
   };
@@ -336,21 +568,16 @@ export const EmergencyProvider = ({ children }) => {
         unsyncedLocations: [...(prev.unsyncedLocations || []), formattedLocation]
       };
       
-      // Sync location to backend if we have a backend ID
       if (prev.backendId) {
         const locationsToSync = [...updated.unsyncedLocations];
-        updated.unsyncedLocations = []; // optimistic clear
+        updated.unsyncedLocations = [];
         
         locationsToSync.forEach(loc => {
            api.addLocation(prev.backendId, {
              latitude: loc.latitude,
              longitude: loc.longitude,
              accuracy: loc.accuracy
-           }).catch(err => {
-             console.log("Failed to sync location to backend:", err.message);
-             // We could add it back to the queue here if we wanted robust retry, 
-             // but keeping it simple for the foreground tracking.
-           });
+           }).catch(() => {});
         });
       }
 
@@ -360,6 +587,14 @@ export const EmergencyProvider = ({ children }) => {
   };
 
   const endEmergency = async () => {
+    try {
+      if (isSharingActive) {
+        await stopLiveSharing();
+      }
+    } catch (shareErr) {
+      console.warn('Error stopping live sharing on emergency end:', shareErr);
+    }
+
     if (activeIncident) {
       try {
         const now = new Date();
@@ -368,7 +603,7 @@ export const EmergencyProvider = ({ children }) => {
 
         const endedIncident = {
           ...activeIncident,
-          status: 'ENDED', // explicitly use ENDED status
+          status: 'ENDED',
           endedAt: now.toISOString(),
           duration: durationSec,
           timeline: [
@@ -383,7 +618,6 @@ export const EmergencyProvider = ({ children }) => {
 
         await AsyncStorage.setItem('women_safety_incidents', JSON.stringify(updatedHistory));
 
-        // Sync resolved status to backend
         if (activeIncident.backendId) {
           api.updateIncident(activeIncident.backendId, {
             status: 'RESOLVED',
@@ -397,19 +631,146 @@ export const EmergencyProvider = ({ children }) => {
 
     setIsEmergencyActive(false);
     setActiveIncident(null);
-    // Explicitly set isActive to false and incident to null in storage
+    setSosStatus('ended');
     saveState(false, null);
+
+    setTimeout(() => {
+      setSosStatus('idle');
+    }, 500);
+  };
+
+  // ==========================================
+  // LIVE LOCATION SHARING
+  // ==========================================
+
+  const startLocationWatcher = async (sessionToken) => {
+    try {
+      if (locationWatchSubscriptionRef.current) {
+        locationWatchSubscriptionRef.current.remove();
+      }
+
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000, // 10 seconds
+          distanceInterval: 5  // 5 meters
+        },
+        async (loc) => {
+          try {
+            const uploadTime = new Date().toISOString();
+            setLastShareUploadTime(uploadTime);
+            setSharingSession(prev => prev ? {
+              ...prev,
+              last_latitude: loc.coords.latitude,
+              last_longitude: loc.coords.longitude,
+              last_accuracy: Math.round(loc.coords.accuracy || 0),
+              last_updated: uploadTime
+            } : null);
+
+            await api.updateLocationShare({
+              session_token: sessionToken,
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+              accuracy: loc.coords.accuracy || 0
+            });
+            setSharingError(null);
+          } catch (err) {
+            console.warn('[Live Location Sharing] Background update warning:', err.message);
+            setSharingError('Temporary network sync issue. Retrying...');
+          }
+        }
+      );
+      locationWatchSubscriptionRef.current = subscription;
+    } catch (err) {
+      console.error('[Live Location Sharing] Watcher error:', err);
+      setSharingError(err.message || 'Unable to start location watcher');
+    }
+  };
+
+  const startLiveSharing = async (explicitToken = null) => {
+    if (!user) {
+      throw new Error('Please sign in to start live location sharing.');
+    }
+    setSharingError(null);
+
+    try {
+      const session = await api.startLocationShare(explicitToken);
+      setIsSharingActive(true);
+      setSharingSession(session);
+      setLastShareUploadTime(new Date().toISOString());
+
+      // Upload initial position and start watcher in background WITHOUT BLOCKING
+      (async () => {
+        try {
+          const fast = await getFastLocation();
+          if (fast && session.session_token) {
+            const lat = fast.lat ?? fast.latitude;
+            const lng = fast.lng ?? fast.longitude;
+            if (lat != null && lng != null) {
+              await api.updateLocationShare({
+                session_token: session.session_token,
+                latitude: lat,
+                longitude: lng,
+                accuracy: fast.accuracy || 0
+              });
+            }
+          }
+          await startLocationWatcher(session.session_token);
+        } catch (err) {
+          console.warn('[Live Sharing] Initial position upload note:', err.message);
+        }
+      })();
+
+      return session;
+    } catch (err) {
+      setSharingError(err.message || 'Failed to start live location sharing');
+      setIsSharingActive(false);
+      throw err;
+    }
+  };
+
+  const stopLiveSharingInternal = () => {
+    if (locationWatchSubscriptionRef.current) {
+      locationWatchSubscriptionRef.current.remove();
+      locationWatchSubscriptionRef.current = null;
+    }
+    setIsSharingActive(false);
+    setSharingSession(null);
+  };
+
+  const stopLiveSharing = async () => {
+    try {
+      await api.stopLocationShare();
+    } catch (err) {
+      console.warn('Error stopping location share on backend:', err.message);
+    } finally {
+      stopLiveSharingInternal();
+      setSharingError(null);
+    }
   };
 
   return (
     <EmergencyContext.Provider value={{
-      isEmergencyActive,
+      sosStatus,
+      pendingTrigger,
+      countdownRemaining,
+      requestSOSTrigger,
+      cancelSOSTrigger,
+      isEmergencyActive: isEmergencyActive || sosStatus === 'active',
       activeIncident,
       isEmergencyLoading,
       activateEmergency,
       endEmergency,
       addTimelineEvent,
-      updateIncidentLocation
+      updateIncidentLocation,
+
+      // Live Location Sharing
+      isSharingActive,
+      sharingSession,
+      sharingError,
+      lastShareUploadTime,
+      startLiveSharing,
+      stopLiveSharing
     }}>
       {children}
     </EmergencyContext.Provider>
@@ -417,3 +778,4 @@ export const EmergencyProvider = ({ children }) => {
 };
 
 export const useEmergency = () => useContext(EmergencyContext);
+

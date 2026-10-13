@@ -48,7 +48,8 @@ class IncidentBase(BaseModel):
     type: str
 
 class IncidentCreate(IncidentBase):
-    pass
+    trigger_source: Optional[str] = "MANUAL"
+    idempotency_key: Optional[str] = None
 
 class IncidentUpdate(BaseModel):
     status: str
@@ -58,6 +59,8 @@ class IncidentResponse(IncidentBase):
     id: int
     user_id: int
     status: str
+    trigger_source: Optional[str] = "MANUAL"
+    idempotency_key: Optional[str] = None
     start_time: datetime
     end_time: Optional[datetime] = None
     resolved_by: Optional[str] = None
@@ -81,3 +84,46 @@ class LocationResponse(LocationBase):
 
     class Config:
         from_attributes = True
+
+# LIVE LOCATION SHARING SCHEMAS
+class LocationShareStartRequest(BaseModel):
+    session_token: Optional[str] = None
+
+class LocationShareStartResponse(BaseModel):
+    session_token: str
+    tracking_url: str
+    expires_at: datetime
+    is_active: bool
+
+class LocationShareUpdateRequest(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = None
+
+class LocationSharePublicResponse(BaseModel):
+    is_active: bool
+    session_token: str
+    user_name: Optional[str] = "SafeHer User"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    accuracy: Optional[float] = None
+    last_updated_at: Optional[datetime] = None
+    is_stale: bool = False
+    expires_at: datetime
+
+# LOCATION SAFETY SCORE SCHEMAS
+class SafetyFactor(BaseModel):
+    name: str
+    score_impact: float
+    status: str # "POSITIVE", "NEUTRAL", "CAUTION", "ALERT", "MISSING"
+    source: str
+    description: str
+
+class SafetyScoreResponse(BaseModel):
+    score: float # 0.0 to 10.0
+    confidence: str # "HIGH", "MEDIUM", "LOW", "UNAVAILABLE"
+    factors: List[SafetyFactor]
+    missing_factors: List[str]
+    explanation: str
+    guidance: str
+    data_updated_at: datetime

@@ -287,3 +287,127 @@ def test_resolve_all_when_none_unresolved():
     assert data["unresolved_remaining"] == 0
     assert "No unresolved incidents" in data["message"]
 
+def test_idempotent_incident_creation():
+    idemp_key = "unique-test-key-999"
+    # First create
+    res1 = client.post(
+        "/incidents/",
+        headers={"Authorization": VALID_TOKEN},
+        json={"type": "SOS Emergency", "trigger_source": "SHAKE", "idempotency_key": idemp_key}
+    )
+    assert res1.status_code == 201
+    inc1 = res1.json()
+    assert inc1["trigger_source"] == "SHAKE"
+    assert inc1["idempotency_key"] == idemp_key
+
+    # Second create with identical key
+    res2 = client.post(
+        "/incidents/",
+        headers={"Authorization": VALID_TOKEN},
+        json={"type": "SOS Emergency", "trigger_source": "SHAKE", "idempotency_key": idemp_key}
+    )
+    assert res2.status_code in (200, 201)
+    inc2 = res2.json()
+    assert inc2["id"] == inc1["id"]
+
+def test_incident_voice_trigger_source():
+    res = client.post(
+        "/incidents/",
+        headers={"Authorization": VALID_TOKEN},
+        json={"type": "SOS Emergency", "trigger_source": "VOICE", "idempotency_key": "voice-trigger-key-1"}
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["trigger_source"] == "VOICE"
+
+def test_live_location_share_lifecycle():
+    # 1. Start sharing session
+    start_res = client.post(
+        "/locations/share/start",
+        headers={"Authorization": VALID_TOKEN}
+    )
+    assert start_res.status_code == 200
+    start_data = start_res.json()
+    token = start_data["session_token"]
+    assert token
+    assert start_data["is_active"] is True
+    assert "/track?token=" in start_data["tracking_url"]
+    assert start_data["tracking_url"].startswith("https://")
+    assert "safeher.app" not in start_data["tracking_url"]
+    assert "localhost" not in start_data["tracking_url"]
+    assert "127.0.0.1" not in start_data["tracking_url"]
+
+    # 1b. Start sharing with client-supplied explicit session token
+    explicit_res = client.post(
+        "/locations/share/start",
+        headers={"Authorization": VALID_TOKEN},
+        json={"session_token": "client_explicit_token_12345"}
+    )
+    assert explicit_res.status_code == 200
+    token = explicit_res.json()["session_token"]
+    assert token == "client_explicit_token_12345"
+    assert "token=client_explicit_token_12345" in explicit_res.json()["tracking_url"]
+
+    # 2. Update coordinates
+    update_res = client.post(
+        "/locations/share/update",
+        headers={"Authorization": VALID_TOKEN},
+        json={"latitude": 16.506, "longitude": 80.648, "accuracy": 12.5}
+    )
+    assert update_res.status_code == 200
+    assert update_res.json()["status"] == "updated"
+
+    # 3. Read active session
+    active_res = client.get(
+        "/locations/share/active",
+        headers={"Authorization": VALID_TOKEN}
+    )
+    assert active_res.status_code == 200
+    active_data = active_res.json()
+    assert active_data["latitude"] == 16.506
+    assert active_data["longitude"] == 80.648
+    assert active_data["accuracy"] == 12.5
+    assert active_data["is_active"] is True
+
+    # 4. Public track via token (unauthenticated for emergency recipient)
+    track_res = client.get(f"/locations/share/track/{token}")
+    assert track_res.status_code == 200
+    track_data = track_res.json()
+    assert track_data["latitude"] == 16.506
+    assert track_data["is_active"] is True
+
+    # 5. Non-existent token returns 404
+    missing_res = client.get("/locations/share/track/non-existent-random-token-999")
+    assert missing_res.status_code == 404
+
+    # 6. Stop sharing session
+    stop_res = client.post(
+        "/locations/share/stop",
+        headers={"Authorization": VALID_TOKEN}
+    )
+    assert stop_res.status_code == 200
+    assert stop_res.json()["status"] == "stopped"
+
+    # 7. Verify token is revoked and location is masked
+    revoked_res = client.get(f"/locations/share/track/{token}")
+    assert revoked_res.status_code == 200
+    assert revoked_res.json()["is_active"] is False
+    assert revoked_res.json()["latitude"] is None
+    assert revoked_res.json()["longitude"] is None
+
+def test_location_safety_score_calculation():
+    # Normal coordinates
+    res = client.get("/locations/safety-score?latitude=16.506&longitude=80.648&accuracy=15.0")
+    assert res.status_code == 200
+    data = res.json()
+    assert 0.0 <= data["score"] <= 10.0
+    assert data["confidence"] in ["HIGH", "MEDIUM", "LOW", "UNAVAILABLE"]
+    assert len(data["factors"]) > 0
+    assert "explanation" in data
+    assert "guidance" in data
+
+    # Invalid coordinates
+    bad_res = client.get("/locations/safety-score?latitude=999&longitude=80.648")
+    assert bad_res.status_code == 400
+
+

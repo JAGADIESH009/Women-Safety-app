@@ -15,10 +15,34 @@ def get_incidents(current_user: User = Depends(get_current_user), db: Session = 
 
 @router.post("/", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 def create_incident(incident: IncidentCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Create a new emergency incident."""
+    """Create a new emergency incident idempotently."""
+    # Check idempotency key if provided
+    if incident.idempotency_key:
+        existing = db.query(Incident).filter(
+            Incident.user_id == current_user.id,
+            Incident.idempotency_key == incident.idempotency_key
+        ).first()
+        if existing:
+            return existing
+    else:
+        # Safety duplicate prevention: If an active incident was created in the last 10 seconds with same type, reuse it
+        recent_active = db.query(Incident).filter(
+            Incident.user_id == current_user.id,
+            Incident.type == incident.type,
+            Incident.status == "ACTIVE"
+        ).order_by(Incident.start_time.desc()).first()
+        
+        if recent_active and recent_active.start_time:
+            now_utc = datetime.now(timezone.utc)
+            start_utc = recent_active.start_time if recent_active.start_time.tzinfo else recent_active.start_time.replace(tzinfo=timezone.utc)
+            if (now_utc - start_utc).total_seconds() < 10:
+                return recent_active
+
     new_incident = Incident(
         user_id=current_user.id,
         type=incident.type,
+        trigger_source=incident.trigger_source or "MANUAL",
+        idempotency_key=incident.idempotency_key,
         status="ACTIVE"
     )
     db.add(new_incident)

@@ -9,6 +9,11 @@ import { ScreenWrapper } from '../components/ui/ScreenWrapper';
 import { Card } from '../components/ui/Card';
 import { useLocation } from '../hooks/useLocation';
 import { api } from '../services/api';
+import { SOSConfirmationModal } from '../components/SOSConfirmationModal';
+import { LiveLocationShareCard } from '../components/LiveLocationShareCard';
+import { LocationSafetyCard } from '../components/LocationSafetyCard';
+import { motionDetector } from '../services/motionDetector';
+import { voiceDetector } from '../services/voiceDetector';
 import { ShieldCheck, Users, PhoneCall, AlertTriangle, Activity, ShieldAlert, ChevronRight, CheckCircle, RefreshCw } from 'lucide-react-native';
 import { useAppTheme, spacing, typography, borderRadius } from '../utils/theme';
 
@@ -21,7 +26,7 @@ const normalizePhone = (phone) => {
 export function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const { location, errorMsg, isLoading } = useLocation();
-  const { activeIncident } = useEmergency();
+  const { activeIncident, requestSOSTrigger } = useEmergency();
   const { width } = useWindowDimensions();
   const [contactsReady, setContactsReady] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -34,6 +39,11 @@ export function HomeScreen({ navigation }) {
 
   const isDesktop = width > 768;
   const isSecure = !activeIncident && !errorMsg && !isLoading;
+
+  const locationRef = useRef(location);
+  locationRef.current = location;
+  const requestSOSTriggerRef = useRef(requestSOSTrigger);
+  requestSOSTriggerRef.current = requestSOSTrigger;
 
   const loadContacts = useCallback(async () => {
     try {
@@ -48,6 +58,14 @@ export function HomeScreen({ navigation }) {
           const all = JSON.parse(stored);
           rawContacts = user?.uid ? all.filter(c => !c.userId || c.userId === user.uid) : all;
         }
+      }
+      if (!rawContacts || rawContacts.length === 0) {
+        try {
+          const cloud = await api.getContacts();
+          if (Array.isArray(cloud)) {
+            rawContacts = cloud;
+          }
+        } catch (e) {}
       }
       // Deduplicate with normalized phone & stable ID
       const seen = new Set();
@@ -66,14 +84,53 @@ export function HomeScreen({ navigation }) {
     }
   }, [user?.uid]);
 
+  const setupDetectors = useCallback(async () => {
+    try {
+      const shakeEnabled = await AsyncStorage.getItem('safeher_shake_sos_enabled');
+      if (shakeEnabled !== 'false') {
+        motionDetector.startListening(() => {
+          console.log('[HomeScreen] Triggering SOS via Motion Detector');
+          requestSOSTriggerRef.current?.('SHAKE', true, locationRef.current);
+        });
+      } else {
+        motionDetector.stopListening();
+      }
+
+      const voiceEnabled = await AsyncStorage.getItem('safeher_voice_sos_enabled');
+      if (voiceEnabled !== 'false') {
+        voiceDetector.startListening(() => {
+          console.log('[HomeScreen] Triggering SOS via Voice Detector');
+          requestSOSTriggerRef.current?.('VOICE', true, locationRef.current);
+        });
+      } else {
+        voiceDetector.stopListening();
+      }
+    } catch (err) {
+      console.warn('Error configuring safety detectors:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribeFocus = navigation.addListener('focus', () => {
       loadContacts();
+      setupDetectors();
+    });
+
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      motionDetector.stopListening();
+      voiceDetector.stopListening();
     });
 
     loadContacts();
-    return unsubscribe;
-  }, [navigation, loadContacts]);
+    setupDetectors();
+
+    return () => {
+      unsubscribeFocus();
+      unsubscribeBlur();
+      motionDetector.stopListening();
+      voiceDetector.stopListening();
+    };
+  }, [navigation, loadContacts, setupDetectors]);
 
   useEffect(() => {
     // Ambient safety pulse
@@ -339,6 +396,8 @@ export function HomeScreen({ navigation }) {
         <View style={styles.desktopGrid}>
           <View style={styles.desktopLeft}>
             {renderSafetyStatus()}
+            <LiveLocationShareCard />
+            <LocationSafetyCard />
             {renderLocation()}
             {renderContacts()}
             {renderActivity()}
@@ -348,6 +407,7 @@ export function HomeScreen({ navigation }) {
             {renderQuickActions()}
           </View>
         </View>
+        <SOSConfirmationModal />
       </ScreenWrapper>
     );
   }
@@ -357,13 +417,17 @@ export function HomeScreen({ navigation }) {
       {renderHeader()}
       {renderSafetyStatus()}
       {renderSOS()}
+      <LiveLocationShareCard />
+      <LocationSafetyCard />
       {renderLocation()}
       {renderContacts()}
       {renderQuickActions()}
       {renderActivity()}
+      <SOSConfirmationModal />
     </ScreenWrapper>
   );
 }
+
 
 function ActionBtn({ icon, label, onPress, colors }) {
   return (

@@ -52,7 +52,7 @@ def verify_firebase_token(authorization: str = Header(None)) -> str:
     token = authorization.split("Bearer ")[1]
             
     try:
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = auth.verify_id_token(token, clock_skew_seconds=10)
         uid = decoded_token.get("uid")
         if not uid:
             raise ValueError("No UID in token")

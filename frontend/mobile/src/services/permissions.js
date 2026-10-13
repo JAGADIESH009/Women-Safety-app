@@ -24,6 +24,10 @@ export const PERMISSION_DESCRIPTIONS = {
     title: 'Notifications Permission',
     purpose: 'Notification permission ensures you receive critical safety warnings, check-in reminders, and active emergency status alerts.',
   },
+  microphone: {
+    title: 'Microphone Permission',
+    purpose: 'Voice activation requires microphone access to detect "SafeHer SOS". No audio is recorded or stored.',
+  },
 };
 
 export async function checkAllPermissions() {
@@ -32,6 +36,7 @@ export async function checkAllPermissions() {
     sms: false,
     phone: false,
     notifications: false,
+    microphone: false,
   };
 
   if (Platform.OS === 'web') {
@@ -61,6 +66,12 @@ export async function checkAllPermissions() {
     }
 
     try {
+      result.microphone = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+    } catch (e) {
+      console.log('Microphone check error:', e);
+    }
+
+    try {
       if (Platform.Version >= 33) {
         result.notifications = await PermissionsAndroid.check(
           'android.permission.POST_NOTIFICATIONS'
@@ -75,6 +86,7 @@ export async function checkAllPermissions() {
 
   return result;
 }
+
 
 export function openAppSettings() {
   Linking.openSettings().catch(() => {
@@ -184,3 +196,28 @@ export async function requestNotificationPermission() {
     return false;
   }
 }
+
+export async function requestMicrophonePermission() {
+  if (Platform.OS !== 'android') return true;
+  try {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      {
+        title: PERMISSION_DESCRIPTIONS.microphone.title,
+        message: PERMISSION_DESCRIPTIONS.microphone.purpose,
+        buttonPositive: 'Allow',
+        buttonNegative: 'Not Now',
+      }
+    );
+
+    if (result === PermissionsAndroid.RESULTS.GRANTED) return true;
+    if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      showPermanentDenialAlert('microphone', PERMISSION_DESCRIPTIONS.microphone);
+    }
+    return false;
+  } catch (e) {
+    console.warn('Failed to request Microphone permission:', e);
+    return false;
+  }
+}
+

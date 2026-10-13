@@ -12,11 +12,12 @@ load_dotenv(dotenv_path=env_path)
 SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL")
 
 is_production = os.environ.get("RENDER") == "true"
+use_sqlite = os.environ.get("USE_LOCAL_SQLITE", "true").lower() in ("true", "1", "yes")
 
-if not SQLALCHEMY_DATABASE_URL:
-    if is_production:
+if (use_sqlite and not is_production) or not SQLALCHEMY_DATABASE_URL:
+    if is_production and not SQLALCHEMY_DATABASE_URL:
         raise ValueError("CRITICAL: DATABASE_URL environment variable is missing on Render. Please set it in the Render Dashboard.")
-    print("WARNING: DATABASE_URL environment variable is not set. Using local SQLite database.")
+    print("INFO: Using local SQLite database.")
     SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 else:
     # SQLAlchemy 2.0+ with psycopg3 requires postgresql+psycopg://
