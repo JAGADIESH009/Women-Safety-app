@@ -23,6 +23,14 @@ web-build/
 *.jks
 *.keystore
 *.apk
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+.gradle/
+build/
+.playwright-cli/
+*.png
 
 
 # IDEs and OS
